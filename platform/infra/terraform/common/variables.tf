@@ -11,7 +11,7 @@ variable "secret_name_ssh_secrets" {
 }
 
 
-variable "gitops_peeks_repo_name" {
+variable "gitops_fleet_repo_name" {
   description = "Git repository name for addons"
   default     = "peeks-workshop-gitops-fleet"
 }

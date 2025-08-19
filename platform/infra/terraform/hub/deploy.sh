@@ -33,8 +33,8 @@ echo "Deploy Hub cluster"
 # Apply with custom cluster name if provided
 if [ -n "$CLUSTER_NAME" ]; then
   echo "Using custom cluster name: $CLUSTER_NAME"
-  terraform -chdir=$SCRIPTDIR apply -auto-approve -var-file=$TF_VAR_FILE -var="cluster_name=$CLUSTER_NAME" -var="account_ids=$ACCOUNT_ID"
+  terraform -chdir=$SCRIPTDIR apply -var-file=$TF_VAR_FILE -var="cluster_name=$CLUSTER_NAME" -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve
 else
   echo "Using default cluster name: peeks-hub-cluster"
-  terraform -chdir=$SCRIPTDIR -var-file=$TF_VAR_FILE apply -auto-approve -var="account_ids=$ACCOUNT_ID"
+  terraform -chdir=$SCRIPTDIR apply  -var-file=$TF_VAR_FILE -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve
 fi
