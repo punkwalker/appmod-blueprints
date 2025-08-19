@@ -2,21 +2,29 @@
 # External Secrets EKS Access
 ################################################################################
 module "external_secrets_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
+  count   = local.aws_addons.enable_external_secrets ? 1 : 0
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 1.4.0"
 
   name = "external-secrets"
 
   attach_external_secrets_policy        = true
-  external_secrets_ssm_parameter_arns   = ["arn:aws:ssm:*:*:parameter/*"] # In case you want to restrict access to specific SSM parameters "arn:aws:ssm:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:parameter/${local.name}/*"
-  external_secrets_secrets_manager_arns = ["arn:aws:secretsmanager:*:*:secret:*"] # In case you want to restrict access to specific Secrets Manager secrets "arn:aws:secretsmanager:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:secret:${local.name}/*"
-  external_secrets_kms_key_arns         = ["arn:aws:kms:*:*:key/*"] # In case you want to restrict access to specific KMS keys "arn:aws:kms:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:key/*"
+  external_secrets_kms_key_arns         = ["arn:aws:kms:${local.region}:*:key/${local.cluster_info.cluster_name}/*"]
+  external_secrets_secrets_manager_arns = ["arn:aws:secretsmanager:${local.region}:*:secret:${local.cluster_info.cluster_name}/*"]
+  external_secrets_ssm_parameter_arns   = ["arn:aws:ssm:${local.region}:*:parameter/${local.cluster_info.cluster_name}/*"]
   external_secrets_create_permission    = false
-
+  attach_custom_policy                  = true
+  policy_statements = [
+    {
+      sid       = "ecr"
+      actions   = ["ecr:*"]
+      resources = ["*"]
+    }
+  ]
   # Pod Identity Associations
   associations = {
     addon = {
-      cluster_name = module.eks.cluster_name
+      cluster_name    = local.cluster_info.cluster_name
       namespace       = local.external_secrets.namespace
       service_account = local.external_secrets.service_account
     }
@@ -26,214 +34,250 @@ module "external_secrets_pod_identity" {
 }
 
 ################################################################################
-# CloudWatch Observability
-################################################################################
-module "aws_cloudwatch_observability_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
-
-  name = "aws-cloudwatch-observability"
-
-  attach_aws_cloudwatch_observability_policy = true
-
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = "amazon-cloudwatch"
-      service_account = "cloudwatch-agent"
-    }
-  }
-
-  tags = local.tags
-}
-
-################################################################################
-# Kyverno Policy Reporter SecurityHub Access
-################################################################################
-module "kyverno_policy_reporter_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
-
-  name = "kyverno-policy-reporter"
-
-  additional_policy_arns = {
-    AWSSecurityHub = "arn:aws:iam::aws:policy/AWSSecurityHubFullAccess"
-  }
-
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = "kyverno"
-      service_account = "policy-reporter"
-    }
-  }
-
-  tags = local.tags
-}
-
-################################################################################
 # EBS CSI EKS Access
 ################################################################################
-module "aws_ebs_csi_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
+# module "aws_ebs_csi_pod_identity" {
+#   source  = "terraform-aws-modules/eks-pod-identity/aws"
+#   version = "~> 1.4.0"
 
-  name = "aws-ebs-csi"
+#   name = "aws-ebs-csi"
 
-  attach_aws_ebs_csi_policy = true
-  aws_ebs_csi_kms_arns      = ["arn:aws:kms:*:*:key/*"]
+#   attach_aws_ebs_csi_policy = true
+#   aws_ebs_csi_kms_arns      = ["arn:aws:kms:*:*:key/*"]
 
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = "kube-system"
-      service_account = "ebs-csi-controller-sa"
-    }
-  }
+#   # Pod Identity Associations
+#   associations = {
+#     addon = {
+#       cluster_name    = local.cluster_info.cluster_name
+#       namespace       = "kube-system"
+#       service_account = "ebs-csi-controller-sa"
+#     }
+#   }
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
 ################################################################################
 # AWS ALB Ingress Controller EKS Access
 ################################################################################
-module "aws_lb_controller_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
+# module "aws_lb_controller_pod_identity" {
+#   count   = local.aws_addons.enable_aws_load_balancer_controller || local.enable_automode ? 1 : 0
+#   source  = "terraform-aws-modules/eks-pod-identity/aws"
+#   version = "~> 1.4.0"
 
-  name = "aws-lbc"
+#   name = "aws-lbc"
 
-  attach_aws_lb_controller_policy = true
+#   attach_aws_lb_controller_policy = true
 
 
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = local.aws_load_balancer_controller.namespace
-      service_account = local.aws_load_balancer_controller.service_account
-    }
-  }
+#   # Pod Identity Associations
+#   associations = {
+#     addon = {
+#       cluster_name    = local.cluster_info.cluster_name
+#       namespace       = local.aws_load_balancer_controller.namespace
+#       service_account = local.aws_load_balancer_controller.service_account
+#     }
+#   }
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
 ################################################################################
 # Karpenter EKS Access
 ################################################################################
 
-module "karpenter" {
-  source  = "terraform-aws-modules/eks/aws//modules/karpenter"
-  version = "~> 20.36.0"
+module "argocd_hub_pod_identity" {
+  source  = "terraform-aws-modules/eks-pod-identity/aws"
+  version = "~> 1.4.0"
 
-  cluster_name = module.eks.cluster_name
+  name      = "argocd-hub-mgmt"
+  use_name_prefix = false
 
-  enable_pod_identity             = true
-  create_pod_identity_association = true
+  attach_custom_policy = true
+  policy_statements = [
+    {
+      sid       = "ArgoCD"
+      actions   = ["sts:AssumeRole", "sts:TagSession"]
+      resources = ["*"]
+    }
+  ]
 
-  namespace = local.karpenter.namespace
-  service_account = local.karpenter.service_account
-
-  # Used to attach additional IAM policies to the Karpenter node IAM role
-  # Adding IAM policy needed for fluentbit
-  node_iam_role_additional_policies = {
-    AmazonSSMManagedInstanceCore = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
-    CloudWatchAgentServerPolicy = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
+  # Pod Identity Associations
+  association_defaults = {
+    namespace = "argocd"
+  }
+  associations = {
+    controller = {
+      cluster_name    = local.cluster_info.cluster_name
+      service_account = "argocd-application-controller"
+    }
+    server = {
+      cluster_name    = local.cluster_info.cluster_name
+      service_account = "argocd-server"
+    }
+    repo-server = {
+      cluster_name    = local.cluster_info.cluster_name
+      service_account = "argocd-repo-server"
+    }
   }
 
   tags = local.tags
 }
-################################################################################
-# ArgoCD EKS Pod Identity Association
-################################################################################
-data "aws_ssm_parameter" "argocd_hub_role" {
-  name = "${local.context_prefix}-${var.ssm_parameter_name_argocd_role_suffix}"
-}
-resource "aws_eks_pod_identity_association" "argocd_controller" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "argocd"
-  service_account = "argocd-application-controller"
-  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
-  tags = local.tags
-}
-resource "aws_eks_pod_identity_association" "argocd_server" {
-  cluster_name    = module.eks.cluster_name
-  namespace       = "argocd"
-  service_account = "argocd-server"
-  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
-  tags = local.tags
+
+
+# Define variables for the policy URLs
+variable "policy_arn_urls" {
+  type    = map(string)
+  default = {
+    iam = "https://raw.githubusercontent.com/aws-controllers-k8s/iam-controller/main/config/iam/recommended-policy-arn"
+    ec2 = "https://raw.githubusercontent.com/aws-controllers-k8s/ec2-controller/main/config/iam/recommended-policy-arn"
+    eks = "https://raw.githubusercontent.com/aws-controllers-k8s/eks-controller/main/config/iam/recommended-policy-arn"
+  }
 }
 
-################################################################################
-# VPC CNI Helper
-################################################################################
-resource "aws_iam_policy" "cni_metrics_helper_pod_identity_policy" {
-  name_prefix = "cni_metrics_helper_pod_identity"
-  path        = "/"
-  description = "Policy to allow cni metrics helper put metcics to cloudwatch"
+variable "inline_policy_urls" {
+  type    = map(string)
+  default = {
+    iam = "https://raw.githubusercontent.com/aws-controllers-k8s/iam-controller/main/config/iam/recommended-inline-policy"
+    ec2 = "https://raw.githubusercontent.com/aws-controllers-k8s/ec2-controller/main/config/iam/recommended-inline-policy"
+    eks = "https://raw.githubusercontent.com/aws-controllers-k8s/eks-controller/main/config/iam/recommended-inline-policy"
+  }
+}
 
-  # Terraform's "jsonencode" function converts a
-  # Terraform expression result to valid JSON syntax.
-  policy = jsonencode({
+# Fetch the recommended policy ARNs
+data "http" "policy_arn" {
+  for_each = var.policy_arn_urls
+  url      = each.value
+}
+
+# Fetch the recommended inline policies
+data "http" "inline_policy" {
+  for_each = var.inline_policy_urls
+  url      = each.value
+}
+
+# Create IAM roles for ACK controllers
+resource "aws_iam_role" "ack_controller" {
+  for_each = toset(["iam", "ec2", "eks"])
+  name        = "ack-${each.key}-controller-role-mgmt"
+  
+  assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
       {
+        Sid = "AllowEksAuthToAssumeRoleForPodIdentity"
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = ["sts:AssumeRole", "sts:TagSession"]
+      }
+    ]
+  })
+  description = "IRSA role for ACK ${each.key} controller deployment on EKS cluster using Helm charts"
+  tags        = local.tags
+}
+
+# First, create a local variable to determine valid policies
+locals {
+  valid_policies = {
+    for k, v in data.http.policy_arn : k => v.status_code == 200 ? trimspace(v.body) : null
+  }
+}
+
+# Then modify your policy attachment to only create when there's a valid ARN
+resource "aws_iam_role_policy_attachment" "ack_controller_policy_attachment" {
+  for_each = {
+    for k, v in local.valid_policies : k => v
+    if v != null && can(regex("^arn:aws", v))
+  }
+
+  role       = aws_iam_role.ack_controller[each.key].name
+  policy_arn = each.value
+}
+
+resource "aws_iam_role_policy" "ack_controller_inline_policy" {
+  for_each = toset(["iam", "ec2", "eks"])
+
+  role   = aws_iam_role.ack_controller[each.key].name
+  policy = can(jsondecode(data.http.inline_policy[each.key].body)) ? data.http.inline_policy[each.key].body : jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
         Action = [
-          "cloudwatch:PutMetricData",
+          "${each.key}:*"
         ]
-        Effect   = "Allow"
         Resource = "*"
-      },
+      }
     ]
   })
 }
 
-module "cni_metrics_helper_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
-  name = "cni-metrics-helper"
+data "aws_iam_policy_document" "ack_controller_cross_account_policy" {
+  for_each = toset(["iam", "ec2", "eks"])
 
-  additional_policy_arns = {
-    "cni-metrics-help" : aws_iam_policy.cni_metrics_helper_pod_identity_policy.arn
+  statement {
+    sid    = "AllowCrossAccountAccess"
+    effect = "Allow"
+    actions = ["sts:AssumeRole", "sts:TagSession"]
+    resources = [
+      for account in split(" ", var.account_ids) : "arn:aws:iam::${account}:role/eks-cluster-mgmt-${each.key}"
+    ]
   }
+}
 
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = "kube-system"
-      service_account = "cni-metrics-helper"
-    }
-  }
-  tags = local.tags
+resource "aws_iam_role_policy" "ack_controller_cross_account_policy" {
+  for_each = toset(["iam", "ec2", "eks"])
+
+  role   = aws_iam_role.ack_controller[each.key].name
+  policy = data.aws_iam_policy_document.ack_controller_cross_account_policy[each.key].json
+}
+
+resource "aws_eks_pod_identity_association" "ack_controller" {
+  for_each = toset(["iam", "ec2", "eks"])
+
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "ack-system"
+  service_account = "ack-${each.key}-controller"
+  role_arn        = aws_iam_role.ack_controller[each.key].arn
 }
 
 ################################################################################
-# Grafana operator
+# Kargo ECR Access
 ################################################################################
 
-module "grafana_pod_identity" {
-  source = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.11.0"
-
-  name = "grafana-sa"
-
-  additional_policy_arns = {
-     "PrometheusQueryAccess" = "arn:aws:iam::aws:policy/AmazonPrometheusQueryAccess"
-  }
-
-  # Pod Identity Associations
-  associations = {
-    addon = {
-      cluster_name = module.eks.cluster_name
-      namespace       = "grafana-operator"
-      service_account = "grafana-sa"
-    }
-  }
-
-  tags = local.tags
+resource "aws_iam_role" "kargo_controller_role" {
+  name = "kargo-controller-role"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Service = "pods.eks.amazonaws.com"
+        }
+        Action = [
+          "sts:AssumeRole",
+          "sts:TagSession"
+        ]
+      }
+    ]
+  })
+  
+  description = "IAM role for Kargo to access Amazon ECR"
+  tags        = local.tags
 }
 
+resource "aws_iam_role_policy_attachment" "kargo_ecr_policy" {
+  role       = aws_iam_role.kargo_controller_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
+}
+
+resource "aws_eks_pod_identity_association" "kargo_controller" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "kargo"
+  service_account = "kargo-controller"
+  role_arn        = aws_iam_role.kargo_controller_role.arn
+}
