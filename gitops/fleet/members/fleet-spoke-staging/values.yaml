@@ -1,0 +1,4 @@
+tenant: "tenant1"
+environment: "staging"
+clusterName: "peeks-spoke-staging"
+secretManagerSecretName: "peeks-hub-cluster/peeks-spoke-staging"
