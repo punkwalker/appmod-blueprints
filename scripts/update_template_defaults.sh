@@ -7,7 +7,7 @@ set -e
 TEMPLATE_PATH="/home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/eks-cluster-template/template.yaml"
 GITLAB_DOMAIN=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?contains(DomainName, 'gitlab')]].DomainName" --output text)
 GIT_USERNAME=$(kubectl get secret git-credentials -n argocd -o jsonpath='{.data.GIT_USERNAME}' | base64 --decode)
-WORKING_REPO=$(kubectl get secret git-credentials -n argocd -o jsonpath='{.data.WORKING_REPO}' | base64 --decode)
+#WORKING_REPO=$(kubectl get secret git-credentials -n argocd -o jsonpath='{.data.WORKING_REPO}' | base64 --decode)
 REPO_FULL_URL=https://$GITLAB_DOMAIN/$GIT_USERNAME/$WORKING_REPO.git
 INGRESS_DOMAIN_NAME=$(aws cloudfront list-distributions --query "DistributionList.Items[?Origins.Items[?contains(DomainName, 'hub-ingress')]].DomainName" --output text)
 
