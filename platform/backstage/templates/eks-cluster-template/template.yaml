@@ -33,7 +33,7 @@ spec:
           title: AWS Region
           type: string
           description: AWS Region for the EKS cluster
-          default: "eu-central-1"
+          default: "us-east-1"
         k8sVersion:
           title: Kubernetes Version
           type: string
@@ -43,12 +43,20 @@ spec:
           title: Account ID
           type: string
           description: AWS Account ID
+<<<<<<< HEAD
           default: "123456789012"
+=======
+          default: "665742499430"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
         managementAccountId:
           title: Management Account ID
           type: string
           description: AWS Management Account ID
+<<<<<<< HEAD
           default: "123456789012"
+=======
+          default: "665742499430"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
         tenant:
           title: Tenant Name
           type: string
@@ -56,7 +64,11 @@ spec:
           default: "tenant1"
         repoHostUrl:
           type: string
+<<<<<<< HEAD
           default: gitlab.cloudfront.net
+=======
+          default: ds44r930hq5wk.cloudfront.net
+>>>>>>> 2ec0f56 (Update Backstage Templates)
           ui:widget: hidden
         repoUsername:
           type: string
@@ -64,11 +76,19 @@ spec:
           ui:widget: hidden
         repoName:
           type: string
+<<<<<<< HEAD
           default: eks-cluster-mgmt
           ui:widget: hidden
         ingressDomainName:
           type: string
           default: ingress.cloudfront.net
+=======
+          default: https://github.com/aws-samples/appmod-blueprints
+          ui:widget: hidden
+        ingressDomainName:
+          type: string
+          default: d29v8gpzedd3h1.cloudfront.net
+>>>>>>> 2ec0f56 (Update Backstage Templates)
           ui:widget: hidden
     - title: Git Repository URLs
       properties:
@@ -76,22 +96,38 @@ spec:
           title: Addons Repository URL
           type: string
           description: Git repository URL for addons
+<<<<<<< HEAD
           default: "https://gitlab.cloudfront.net/user1/eks-cluster-mgmt.git"
+=======
+          default: "https://ds44r930hq5wk.cloudfront.net/user1/https://github.com/aws-samples/appmod-blueprints.git"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
         fleetRepoUrl:
           title: Fleet Repository URL
           type: string
           description: Git repository URL for fleet
+<<<<<<< HEAD
           default: "https://gitlab.cloudfront.net/user1/eks-cluster-mgmt.git"
+=======
+          default: "https://ds44r930hq5wk.cloudfront.net/user1/https://github.com/aws-samples/appmod-blueprints.git"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
         platformRepoUrl:
           title: Platform Repository URL
           type: string
           description: Git repository URL for platform
+<<<<<<< HEAD
           default: "https://gitlab.cloudfront.net/user1/eks-cluster-mgmt.git"
+=======
+          default: "https://ds44r930hq5wk.cloudfront.net/user1/https://github.com/aws-samples/appmod-blueprints.git"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
         workloadRepoUrl:
           title: Workload Repository URL
           type: string
           description: Git repository URL for workload
+<<<<<<< HEAD
           default: "https://gitlab.cloudfront.net/user1/eks-cluster-mgmt.git"
+=======
+          default: "https://ds44r930hq5wk.cloudfront.net/user1/https://github.com/aws-samples/appmod-blueprints.git"
+>>>>>>> 2ec0f56 (Update Backstage Templates)
     - title: Cluster Addons Configuration
       properties:
         enableIngressClassAlb:
