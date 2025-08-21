@@ -31,10 +31,11 @@
 #   Run after 0-initial-setup.sh and before 2-bootstrap-accounts.sh
 #
 #############################################################################
-set -x
 # Source the colors script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/colors.sh"
+
+#set -x
 
 # Function to update or add environment variable to /etc/profile.d/workshop.sh
 update_workshop_var() {
@@ -77,7 +78,7 @@ update_workshop_var "WORKING_REPO" "platform-on-eks-workshop"
 source /etc/profile.d/workshop.sh
 
 print_info "Creating GitLab SSH keys"
-$WORKSHOP_DIR/scripts/gitlab_create_keys.sh
+$SCRIPT_DIR/gitlab_create_keys.sh
 
 print_step "Configuring Git remote and pushing to GitLab"
 cd $WORKSPACE_PATH/$WORKING_REPO
@@ -86,7 +87,7 @@ git remote add workshop ssh://git@$NLB_DNS/$GIT_USERNAME/$WORKING_REPO.git
 git config remote.pushdefault workshop
 
 print_step "Updating Backstage templates"
-$WORKSHOP_DIR/scripts/update_template_defaults.sh
+$SCRIPT_DIR/update_template_defaults.sh
 git add . && git commit -m "Update Backstage Templates" || true
 
 git push --set-upstream origin main
@@ -113,7 +114,7 @@ print_step "Creating Amazon Elastic Container Repository (Amazon ECR) for Backst
 aws ecr create-repository --repository-name backstage --region $AWS_REGION || true
 
 print_step "Building Backstage image"
-$WORKSHOP_DIR/scripts/build_backstage.sh $WORKSHOP_DIR/backstage
+$SCRIPT_DIR/build_backstage.sh $WORKSHOP_DIR/backstage
 
 print_step "Logging in to ArgoCD CLI"
 argocd login --username admin --password $IDE_PASSWORD --grpc-web-root-path /argocd $DOMAIN_NAME
