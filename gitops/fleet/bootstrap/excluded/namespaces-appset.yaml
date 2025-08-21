@@ -3,6 +3,8 @@ kind: ApplicationSet
 metadata:
   name: namespaces
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"  
 spec:
   syncPolicy:
     preserveResourcesOnDeletion: false
@@ -16,6 +18,17 @@ spec:
           selector:
             matchLabels:
               workloads: 'true'
+            matchExpressions:
+              - key: environment
+                operator: In
+                values:
+                  - staging
+                  - prod
+            # matchExpressions: # We can used to clean resources before deleting specific clusters
+            #   - key: aws_cluster_name
+            #     operator: NotIn
+            #     values:
+            #       - workload-cluster2                  
           values:
             chart: teams
       - git:

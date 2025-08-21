@@ -3,6 +3,8 @@ kind: ApplicationSet
 metadata:
   name: web-store-frontend
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"  
 spec:
   syncPolicy:
     preserveResourcesOnDeletion: false
@@ -13,10 +15,17 @@ spec:
               selector:
                 matchLabels:
                   workloads: 'true'              
-                # matchExpressions:
-                #   - key: environment
-                #     operator: In
-                #     values: [cluster1, cluster2, cluster3, cluster4, cluster5, cluster6, staging, prod]
+                matchExpressions:
+                  - key: environment
+                    operator: In
+                    values:
+                      - staging
+                      - prod
+                # matchExpressions: # This can be used to clean resources before deleting specific clusters
+                #   - key: aws_cluster_name
+                #     operator: NotIn
+                #     values:
+                #       - workload-cluster2                      
               values:
                 team: frontend
           - git:

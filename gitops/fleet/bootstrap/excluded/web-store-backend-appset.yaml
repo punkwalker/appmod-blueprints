@@ -1,11 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: ApplicationSet
 metadata:
-  name: web-store-frontend
+  name: web-store-backend
   namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"  
 spec:
   syncPolicy:
     preserveResourcesOnDeletion: false
+    #applicationsSync: create-only # create-update, create-delete sync
   generators:
     - matrix:
         generators:
@@ -13,12 +16,19 @@ spec:
               selector:
                 matchLabels:
                   workloads: 'true'              
-                # matchExpressions:
-                #   - key: environment
-                #     operator: In
-                #     values: [cluster1, cluster2, cluster3, cluster4, cluster5, cluster6, staging, prod]
+                matchExpressions:
+                  - key: environment
+                    operator: In
+                    values:
+                      - staging
+                      - prod
+                # matchExpressions: # This can be used to clean resources before deleting specific clusters
+                #   - key: aws_cluster_name
+                #     operator: NotIn
+                #     values:
+                #       - workload-cluster2
               values:
-                team: frontend
+                team: backend
           - git:
               repoURL: '{{metadata.annotations.workload_repo_url}}'
               revision: '{{metadata.annotations.workload_repo_revision}}'
@@ -33,6 +43,9 @@ spec:
         team: '{{values.team}}'
         component: '{{path.basename}}'
         workloads: 'true'
+      # annotations:        
+        # argocd.argoproj.io/compare-options: IgnoreExtraneous
+        # argocd.argoproj.io/sync-options: Prune=true        
       finalizers:
       # This is here only for workshop purposes. In a real-world scenario, you should not use this
       - resources-finalizer.argocd.argoproj.io
@@ -49,6 +62,7 @@ spec:
         automated:
           allowEmpty: true
           prune: true
+          selfHeal: false
         retry:
           backoff:
             duration: 1m
