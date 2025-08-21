@@ -38,6 +38,12 @@ source "$SCRIPT_DIR/colors.sh"
 set -e
 #set -x
 
+# Check for required dependencies
+if ! command -v jq &> /dev/null; then
+    echo "Error: jq is required but not installed. Please install jq first."
+    exit 1
+fi
+
 # Function to update or add environment variable to /etc/profile.d/workshop.sh
 update_workshop_var() {
     local var_name="$1"
@@ -95,8 +101,38 @@ pwd
 git push --set-upstream origin main
 set +x
 
-print_step "Creating ArgoCD Git repository secret"
-envsubst << 'EOF' | kubectl apply -f -
+print_step "Creating GitLab access token for ArgoCD"
+ROOT_TOKEN="root-$IDE_PASSWORD"
+
+# Create GitLab personal access token for ArgoCD repository access
+GITLAB_TOKEN=$(curl -sS -X POST "$GITLAB_URL/api/v4/users/4/personal_access_tokens" \
+  -H "PRIVATE-TOKEN: $ROOT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "argocd-repository-access",
+    "scopes": ["api", "read_repository", "write_repository"],
+    "expires_at": "2025-12-31"
+  }' | jq -r '.token')
+
+if [ "$GITLAB_TOKEN" = "null" ] || [ -z "$GITLAB_TOKEN" ]; then
+    print_error "Failed to create GitLab access token"
+    exit 1
+fi
+
+print_info "GitLab access token created: $GITLAB_TOKEN"
+
+# Test the token
+print_info "Testing GitLab token access..."
+TOKEN_TEST=$(curl -s -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "$GITLAB_URL/api/v4/projects/$GIT_USERNAME%2F$WORKING_REPO" | jq -r '.path_with_namespace // .message')
+if [ "$TOKEN_TEST" = "$GIT_USERNAME/$WORKING_REPO" ]; then
+    print_success "GitLab token test successful"
+else
+    print_error "GitLab token test failed: $TOKEN_TEST"
+    exit 1
+fi
+
+print_step "Creating ArgoCD Git repository secret with GitLab token"
+envsubst << EOF | kubectl apply -f -
 apiVersion: v1
 kind: Secret
 metadata:
@@ -108,8 +144,12 @@ stringData:
    url: ${GITLAB_URL}/${GIT_USERNAME}/${WORKING_REPO}.git
    type: git
    username: $GIT_USERNAME
-   password: $IDE_PASSWORD
+   password: $GITLAB_TOKEN
 EOF
+
+print_step "Restarting ArgoCD repo server to pick up new credentials"
+kubectl rollout restart deployment argocd-repo-server -n argocd
+kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-repo-server -n argocd --timeout=60s
 
 sleep 5
 
