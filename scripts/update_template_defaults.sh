@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Exit on error
-set -ex
+set -e
 
 # Define variables
 TEMPLATE_PATH="/home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/eks-cluster-template/template.yaml"
