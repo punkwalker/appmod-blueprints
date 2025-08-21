@@ -90,7 +90,10 @@ print_step "Updating Backstage templates"
 $SCRIPT_DIR/update_template_defaults.sh
 git add . && git commit -m "Update Backstage Templates" || true
 
+set -x
+pwd
 git push --set-upstream origin main
+set +x
 
 print_step "Creating ArgoCD Git repository secret"
 envsubst << 'EOF' | kubectl apply -f -
