@@ -448,7 +448,7 @@ kro-eks-rgs:
   namespace: kro
   annotationsAppSet:
     argocd.argoproj.io/sync-wave: "-2" # Needs to be before resources that needs PodIdentity
-  path: 'charts/kro/resource-groups/eks'
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/kro/resource-groups/eks'
   chartRepository: '{{.metadata.annotations.addons_repo_url}}'
   targetRevision: '{{.metadata.annotations.addons_repo_revision}}'
   selector:
@@ -463,7 +463,7 @@ multi-acct:
   annotationsAppSet:
     argocd.argoproj.io/sync-wave: "-5" # Needs to be before KRO RGD
   defaultVersion: "0.1.0"
-  path: charts/multi-acct
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/multi-acct'
   selector:
     matchExpressions:
       - key: enable_mutli_acct
@@ -475,7 +475,7 @@ ingress-class-alb:
   annotationsAppSet:
     argocd.argoproj.io/sync-wave: "0"
   defaultVersion: "0.1.0"
-  path: charts/ingress-class-alb
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/ingress-class-alb'
   selector:
     matchExpressions:
       - key: enable_ingress_class_alb
@@ -521,7 +521,7 @@ gitlab:
     argocd.argoproj.io/sync-wave: "4" # Needs to be after External and Ingress Nginx
   namespace: gitlab
   defaultVersion: "0.1.0"
-  path: charts/gitlab
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/gitlab'
   selector:
     matchExpressions:
       - key: enable_gitlab
@@ -540,7 +540,7 @@ keycloak:
     argocd.argoproj.io/sync-wave: "5" # Needs to be after External Secrets, Ingress Nginx and Gitlab
   namespace: keycloak
   defaultVersion: "0.1.0"
-  path: charts/keycloak
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/keycloak'
   selector:
     matchExpressions:
       - key: enable_keycloak
@@ -555,7 +555,7 @@ argo-workflows:
     argocd.argoproj.io/sync-wave: "10" # Needs to be after Keycloak
   namespace: argo
   defaultVersion: "0.1.0"
-  path: charts/argo-workflows
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/argo-workflows'
   selector:
     matchExpressions:
       - key: enable_argo_workflows
@@ -596,7 +596,7 @@ backstage:
     argocd.argoproj.io/sync-wave: "20" # Needs to be after all addons
   namespace: backstage
   defaultVersion: "0.1.0"
-  path: charts/backstage
+  path: '{{.metadata.annotations.addons_repo_basepath}}charts/backstage'
   selector:
     matchExpressions:
       - key: enable_backstage
