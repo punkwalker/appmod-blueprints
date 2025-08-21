@@ -104,7 +104,7 @@ variable "frontend_team_view_role_suffix" {
 variable "gitea_user" {
   description = "User to login on the Gitea instance"
   type = string
-  default = "workshop-user"
+  default = "user1"
 }
 variable "gitea_password" {
   description = "Password to login on the Gitea instance"
