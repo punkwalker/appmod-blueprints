@@ -49,18 +49,32 @@ is_application_healthy() {
     local sync_status="$2"
     local health_status="$3"
     
+    # Check for critical path issues that should not be ignored
+    local path_errors=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.conditions[]?.message // ""' | grep -i "app path does not exist" || true)
+    if [ -n "$path_errors" ]; then
+        print_warning "  $app_name has path configuration issues: $path_errors"
+        return 1
+    fi
+    
+    # Check for other critical errors that should not be ignored
+    local critical_errors=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.conditions[]?.message // ""' | grep -i -E "(failed to generate manifest|repository not found|authentication failed)" || true)
+    if [ -n "$critical_errors" ]; then
+        print_warning "  $app_name has critical errors: $critical_errors"
+        return 1
+    fi
+    
     # Consider healthy if:
     # 1. Health is Healthy, Progressing, or Missing (for new apps)
-    # 2. Sync can be Synced, OutOfSync, or Unknown (we're lenient on sync)
+    # 2. Sync can be Synced, OutOfSync, or Unknown (we're lenient on sync for minor issues)
     case "$health_status" in
         "Healthy"|"Progressing"|"Missing"|"")
             return 0
             ;;
         "Degraded")
-            # Check if it's a known issue we can ignore
-            local conditions=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.conditions[]?.message // ""' | grep -i -E "(unrecognized|unknown|values|config)" || true)
-            if [ -n "$conditions" ]; then
-                print_info "  Ignoring degraded state for $app_name (configuration issue): $conditions"
+            # Check if it's a minor configuration issue we can ignore
+            local minor_conditions=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.conditions[]?.message // ""' | grep -i -E "(unrecognized field|unknown field|values.*not found)" || true)
+            if [ -n "$minor_conditions" ]; then
+                print_info "  Ignoring minor config issues for $app_name: $minor_conditions"
                 return 0
             fi
             return 1
