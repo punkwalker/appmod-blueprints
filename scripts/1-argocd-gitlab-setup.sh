@@ -83,15 +83,14 @@ $SCRIPT_DIR/gitlab_create_keys.sh
 
 print_step "Configuring Git remote and pushing to GitLab"
 cd $WORKSPACE_PATH/$WORKING_REPO
-git remote remove workshop || true
-git remote add workshop ssh://git@$NLB_DNS/$GIT_USERNAME/$WORKING_REPO.git
-git config remote.pushdefault workshop
+git remote rename origin github || true
+git remote add origin ssh://git@$NLB_DNS/$GIT_USERNAME/$WORKING_REPO.git || true
 
 print_step "Updating Backstage templates"
 $SCRIPT_DIR/update_template_defaults.sh
 git add . && git commit -m "Update Backstage Templates" || true
 
-git push --set-upstream workshop main
+git push --set-upstream origin main
 
 print_step "Creating ArgoCD Git repository secret"
 envsubst << 'EOF' | kubectl apply -f -
