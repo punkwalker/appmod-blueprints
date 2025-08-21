@@ -31,7 +31,7 @@
 #   Run after 0-initial-setup.sh and before 2-bootstrap-accounts.sh
 #
 #############################################################################
-set -ex
+set -x
 # Source the colors script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/colors.sh"
@@ -87,7 +87,7 @@ git config remote.pushdefault workshop
 
 print_step "Updating Backstage templates"
 $WORKSHOP_DIR/scripts/update_template_defaults.sh
-git add . && git commit -m "Update Backstage Templates"
+git add . && git commit -m "Update Backstage Templates" || true
 
 git push --set-upstream origin main
 
