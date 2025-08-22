@@ -1,2 +1,0 @@
-# values for the addon
-useSelector: false # use true if you only have argo cd in hub cluster, false if you also have argocd in spoke
