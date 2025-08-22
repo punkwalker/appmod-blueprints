@@ -1,4 +1,4 @@
-SPOKE_CLUSTER_PREFIX=${SPOKE_CLUSTER_NAME_PREFIX:-fleet-spoke}
+SPOKE_CLUSTER_PREFIX=${SPOKE_CLUSTER_NAME_PREFIX:-peeks-spoke}
 SPOKE_STAGING_CLUSTER="${SPOKE_CLUSTER_PREFIX}-staging"
 SPOKE_PROD_CLUSTER="${SPOKE_CLUSTER_PREFIX}-prod"
 
@@ -6,16 +6,16 @@ function deploy_prod (){
   # Deploy the production cluster
 
   # Create the production cluster
-  mkdir $GITOPS_DIR/fleet/members/fleet-spoke-prod
-  cp $WORKSHOP_DIR/gitops/solutions/module-platform/fleet/members/fleet-spoke-prod/values.yaml $GITOPS_DIR/fleet/members/fleet-spoke-prod/values.yaml
+  mkdir $GITOPS_DIR/fleet/members/peeks-spoke-prod
+  cp $WORKSHOP_DIR/gitops/solutions/module-platform/fleet/members/peeks-spoke-prod/values.yaml $GITOPS_DIR/fleet/members/peeks-spoke-prod/values.yaml
   git -C $GITOPS_DIR/fleet status
   git -C $GITOPS_DIR/fleet add .
   git -C $GITOPS_DIR/fleet commit -m "add production cluster fleet member"
   git -C $GITOPS_DIR/fleet push
 
   # Deploy the production addons
-  mkdir $GITOPS_DIR/addons/clusters/fleet-spoke-prod
-  cp -r $WORKSHOP_DIR/gitops/solutions/module-platform/addons/clusters/fleet-spoke-prod/* $GITOPS_DIR/addons/clusters/fleet-spoke-prod/
+  mkdir $GITOPS_DIR/addons/clusters/peeks-spoke-prod
+  cp -r $WORKSHOP_DIR/gitops/solutions/module-platform/addons/clusters/peeks-spoke-prod/* $GITOPS_DIR/addons/clusters/peeks-spoke-prod/
   git -C $GITOPS_DIR/addons status
   git -C $GITOPS_DIR/addons add .
   git -C $GITOPS_DIR/addons commit -m "add addons for production cluster"
@@ -104,7 +104,7 @@ function apps_default_kyverno_insights (){
   # restore default deployment
 
   # Create the production cluster
-  mkdir $GITOPS_DIR/fleet/members/fleet-spoke-prod
+  mkdir $GITOPS_DIR/fleet/members/peeks-spoke-prod
   cp $WORKSHOP_DIR/gitops/apps/backend/catalog/base/deployment.yaml $GITOPS_DIR/apps/backend/catalog/base/deployment.yaml
   cp $WORKSHOP_DIR/gitops/apps/frontend/ui/base/deployment.yaml $GITOPS_DIR/apps/frontend/ui/base/deployment.yaml
   cp $WORKSHOP_DIR/gitops/apps/frontend/assets/base/deployment.yaml $GITOPS_DIR/apps/frontend/assets/base/deployment.yaml
@@ -183,8 +183,8 @@ function custom_domain() {
     fi
 
     echo "Activating External DNS addon patch in ingress"
-    cp "$WORKSHOP_DIR/gitops/solutions/module-custom-domain/gitops/addons/clusters/fleet-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml" \
-       "$GITOPS_DIR/addons/clusters/fleet-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml"
+    cp "$WORKSHOP_DIR/gitops/solutions/module-custom-domain/gitops/addons/clusters/peeks-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml" \
+       "$GITOPS_DIR/addons/clusters/peeks-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml"
     if [[ -n "$(git -C "$GITOPS_DIR/addons" status --porcelain)" ]]; then
         git -C "$GITOPS_DIR/addons" status
         git -C "$GITOPS_DIR/addons" diff | cat
@@ -270,7 +270,7 @@ function custom_domain_delete() {
     fi
 
     echo "Removing External DNS addon patch in ingress"
-    sed -i 's/external_dns:\n    enabled: true # Activate external-dns for custom domain name/external_dns:\n    enabled: false # Activate external-dns for custom domain name/' "$GITOPS_DIR/addons/clusters/fleet-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml"
+    sed -i 's/external_dns:\n    enabled: true # Activate external-dns for custom domain name/external_dns:\n    enabled: false # Activate external-dns for custom domain name/' "$GITOPS_DIR/addons/clusters/peeks-spoke-$ENVIRONMENT/addons/gitops-bridge/values.yaml"
     if [[ -n "$(git -C "$GITOPS_DIR/addons" status --porcelain)" ]]; then
         git -C "$GITOPS_DIR/addons" status
         git -C "$GITOPS_DIR/addons" diff | cat

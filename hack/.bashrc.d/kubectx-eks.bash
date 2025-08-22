@@ -2,8 +2,8 @@
 #!/usr/bin/env bash
 
 # Get cluster names from environment variables or use defaults
-HUB_CLUSTER_NAME=${HUB_CLUSTER_NAME:-fleet-hub-cluster}
-SPOKE_CLUSTER_PREFIX=${SPOKE_CLUSTER_NAME_PREFIX:-fleet-spoke}
+HUB_CLUSTER_NAME=${HUB_CLUSTER_NAME:-peeks-hub-cluster}
+SPOKE_CLUSTER_PREFIX=${SPOKE_CLUSTER_NAME_PREFIX:-peeks-spoke}
 SPOKE_STAGING_CLUSTER="${SPOKE_CLUSTER_PREFIX}-staging"
 SPOKE_PROD_CLUSTER="${SPOKE_CLUSTER_PREFIX}-prod"
 
@@ -44,12 +44,12 @@ update_kubeconfig_if_needed_with_role() {
 # Update kubeconfig for each cluster
 
 # Setup kubectx for EKS clusters as Team
-export BACKEND_TEAM_ROLE_ARN=$(aws ssm --region $AWS_REGION get-parameter --name eks-fleet-workshop-gitops-backend-team-view-role --with-decryption --query "Parameter.Value" --output text)
+export BACKEND_TEAM_ROLE_ARN=$(aws ssm --region $AWS_REGION get-parameter --name peeks-workshop-gitops-backend-team-view-role --with-decryption --query "Parameter.Value" --output text)
 # Update kubeconfig for backend team
 update_kubeconfig_if_needed_with_role "$SPOKE_STAGING_CLUSTER" "${SPOKE_STAGING_CLUSTER}-backend" "${SPOKE_STAGING_CLUSTER}-backend" "$BACKEND_TEAM_ROLE_ARN"
 update_kubeconfig_if_needed_with_role "$SPOKE_PROD_CLUSTER" "${SPOKE_PROD_CLUSTER}-backend" "${SPOKE_PROD_CLUSTER}-backend" "$BACKEND_TEAM_ROLE_ARN"
 
-export FRONTEND_TEAM_ROLE_ARN=$(aws ssm --region $AWS_REGION get-parameter --name eks-fleet-workshop-gitops-frontend-team-view-role --with-decryption --query "Parameter.Value" --output text)
+export FRONTEND_TEAM_ROLE_ARN=$(aws ssm --region $AWS_REGION get-parameter --name peeks-workshop-gitops-frontend-team-view-role --with-decryption --query "Parameter.Value" --output text)
 update_kubeconfig_if_needed_with_role "$SPOKE_STAGING_CLUSTER" "${SPOKE_STAGING_CLUSTER}-frontend" "${SPOKE_STAGING_CLUSTER}-frontend" "$FRONTEND_TEAM_ROLE_ARN"
 update_kubeconfig_if_needed_with_role "$SPOKE_PROD_CLUSTER" "${SPOKE_PROD_CLUSTER}-frontend" "${SPOKE_PROD_CLUSTER}-frontend" "$FRONTEND_TEAM_ROLE_ARN"
 
