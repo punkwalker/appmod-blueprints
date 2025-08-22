@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # fix-git-revision-mismatch.sh
-# Script to fix Git revision mismatch issues by clearing ArgoCD cache and forcing refresh
+# UPDATED: Comprehensive fix based on proven successful approach
+# Script to fix Git revision mismatch issues using the method that actually works
 # Usage: ./fix-git-revision-mismatch.sh [app-name] [namespace]
 
 set -e
@@ -10,13 +11,19 @@ APP_NAME=${1:-}
 NAMESPACE=${2:-argocd}
 DRY_RUN=${DRY_RUN:-false}
 
-echo "🔧 ArgoCD Git Revision Mismatch Fixer"
-echo "====================================="
+echo "🔧 ArgoCD Git Revision Mismatch Fixer (COMPREHENSIVE)"
+echo "===================================================="
 echo "Namespace: $NAMESPACE"
 echo "Timestamp: $(date)"
 echo ""
+echo "⚠️  This script uses the PROVEN comprehensive approach:"
+echo "   1. Delete and recreate stuck applications"
+echo "   2. Restart ArgoCD repo server to clear Git cache"
+echo "   3. Wait for stabilization (avoid Git commits!)"
+echo "   4. Monitor for successful completion"
+echo ""
 
-# Function to check if kubectl and jq are available
+# Function to check dependencies
 check_dependencies() {
     if ! command -v kubectl &> /dev/null; then
         echo "❌ Error: kubectl is not installed or not in PATH"
@@ -29,7 +36,7 @@ check_dependencies() {
     fi
 }
 
-# Function to detect if application has revision mismatch
+# Function to detect revision mismatch
 has_revision_mismatch() {
     local app_name=$1
     local status_message
@@ -43,77 +50,160 @@ has_revision_mismatch() {
     fi
 }
 
-# Function to clear ArgoCD cache for an application
-clear_app_cache() {
+# Function to check if stuck in retry loop
+is_stuck_in_retry_loop() {
     local app_name=$1
+    local retry_count
     
-    echo "🧹 Clearing cache for application: $app_name"
+    retry_count=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.retryCount // 0')
+    
+    if [[ "$retry_count" -gt 10 ]]; then
+        return 0  # Stuck
+    else
+        return 1  # Not stuck
+    fi
+}
+
+# Function to restart ArgoCD repo server
+restart_repo_server() {
+    echo "🔄 Restarting ArgoCD repo server to clear Git cache..."
     
     if [[ "$DRY_RUN" == "true" ]]; then
-        echo "   [DRY RUN] Would execute: kubectl patch application $app_name -n $NAMESPACE --type='json' -p='[{\"op\": \"add\", \"path\": \"/metadata/annotations/argocd.argoproj.io~1refresh\", \"value\": \"hard\"}]'"
+        echo "   [DRY RUN] Would restart ArgoCD repo server"
         return 0
     fi
     
-    # Step 1: Hard refresh to clear Git cache
-    echo "   📡 Step 1: Hard refresh (clearing Git cache)..."
-    kubectl patch application "$app_name" -n "$NAMESPACE" --type='json' -p='[
-        {
-            "op": "add",
-            "path": "/metadata/annotations/argocd.argoproj.io~1refresh",
-            "value": "hard"
-        }
-    ]' 2>/dev/null || {
-        echo "   ⚠️  Warning: Could not apply hard refresh annotation"
-    }
+    local repo_pods
+    repo_pods=$(kubectl get pods -n "$NAMESPACE" -l app.kubernetes.io/name=argocd-repo-server -o name 2>/dev/null)
     
-    # Step 2: Clear any existing operation
-    echo "   🛑 Step 2: Clearing existing operation..."
-    kubectl patch application "$app_name" -n "$NAMESPACE" --type='json' -p='[
-        {
-            "op": "remove",
-            "path": "/operation"
-        }
-    ]' 2>/dev/null || {
-        echo "   ℹ️  No existing operation to clear"
-    }
-    
-    # Step 3: Wait a moment for cache clearing
-    echo "   ⏳ Step 3: Waiting for cache to clear..."
-    sleep 5
-    
-    # Step 4: Force sync with HEAD revision
-    echo "   🔄 Step 4: Force sync to HEAD..."
-    kubectl patch application "$app_name" -n "$NAMESPACE" --type='json' -p='[
-        {
-            "op": "add",
-            "path": "/operation",
-            "value": {
-                "sync": {
-                    "revision": "HEAD",
-                    "syncOptions": ["CreateNamespace=true", "ServerSideApply=true"]
-                }
-            }
-        }
-    ]' 2>/dev/null || {
-        echo "   ⚠️  Warning: Could not initiate sync operation"
+    if [[ -z "$repo_pods" ]]; then
+        echo "   ⚠️  No ArgoCD repo server pods found"
         return 1
+    fi
+    
+    echo "   🗑️  Deleting repo server pods..."
+    kubectl delete $repo_pods -n "$NAMESPACE"
+    
+    echo "   ⏳ Waiting for repo server to restart..."
+    kubectl wait --for=condition=Ready pods -l app.kubernetes.io/name=argocd-repo-server -n "$NAMESPACE" --timeout=120s || {
+        echo "   ⚠️  Timeout waiting for repo server, continuing anyway..."
     }
     
-    echo "   ✅ Cache clearing and sync initiated for $app_name"
+    echo "   ✅ ArgoCD repo server restart completed"
     return 0
 }
 
-# Function to wait for application sync to complete
-wait_for_sync() {
+# Function to comprehensive fix (the method that actually works)
+comprehensive_fix() {
     local app_name=$1
-    local max_wait=${2:-300}  # 5 minutes default
-    local wait_time=0
     
-    echo "⏳ Waiting for $app_name to sync (max ${max_wait}s)..."
+    echo "🔧 COMPREHENSIVE FIX for: $app_name"
+    echo "=================================="
+    
+    # Check if application exists
+    if ! kubectl get application "$app_name" -n "$NAMESPACE" &>/dev/null; then
+        echo "❌ Application '$app_name' not found in namespace '$NAMESPACE'"
+        return 1
+    fi
+    
+    # Show current status
+    local has_mismatch=false
+    local is_stuck=false
+    
+    if has_revision_mismatch "$app_name"; then
+        has_mismatch=true
+        echo "🚨 Git revision mismatch detected"
+    fi
+    
+    if is_stuck_in_retry_loop "$app_name"; then
+        is_stuck=true
+        local retry_count
+        retry_count=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.operationState.retryCount // 0')
+        echo "🔄 Application stuck in retry loop (attempt #$retry_count)"
+    fi
+    
+    # Step 1: Backup application spec
+    echo ""
+    echo "📋 Step 1: Backing up application spec..."
+    local backup_file="/tmp/${app_name}-backup-$(date +%s).yaml"
+    
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "   [DRY RUN] Would backup to: $backup_file"
+    else
+        kubectl get application "$app_name" -n "$NAMESPACE" -o yaml > "$backup_file"
+        echo "   ✅ Backed up to: $backup_file"
+    fi
+    
+    # Step 2: Delete stuck application
+    echo ""
+    echo "🗑️  Step 2: Deleting stuck application..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "   [DRY RUN] Would delete application $app_name"
+    else
+        kubectl delete application "$app_name" -n "$NAMESPACE"
+        echo "   ✅ Application deleted"
+    fi
+    
+    # Step 3: Restart repo server
+    echo ""
+    echo "🔄 Step 3: Restarting ArgoCD repo server..."
+    restart_repo_server
+    
+    # Step 4: Wait for cleanup
+    echo ""
+    echo "⏳ Step 4: Waiting for cleanup..."
+    if [[ "$DRY_RUN" != "true" ]]; then
+        sleep 15
+    else
+        echo "   [DRY RUN] Would wait 15 seconds"
+    fi
+    
+    # Step 5: Recreate application
+    echo ""
+    echo "🔨 Step 5: Recreating application..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "   [DRY RUN] Would recreate from $backup_file"
+    else
+        kubectl apply -f "$backup_file"
+        echo "   ✅ Application recreated"
+    fi
+    
+    # Step 6: Wait for stabilization
+    echo ""
+    echo "⏳ Step 6: Waiting for stabilization..."
+    echo "   ⚠️  CRITICAL: Do NOT make Git commits during this time!"
+    if [[ "$DRY_RUN" != "true" ]]; then
+        sleep 30
+    else
+        echo "   [DRY RUN] Would wait 30 seconds"
+    fi
+    
+    # Step 7: Monitor progress
+    echo ""
+    echo "👀 Step 7: Monitoring progress..."
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "   [DRY RUN] Would monitor application progress"
+        return 0
+    fi
+    
+    local max_wait=300  # 5 minutes
+    local wait_time=0
     
     while [[ $wait_time -lt $max_wait ]]; do
         local phase
         phase=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.phase // "Unknown"')
+        local message
+        message=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.message // "No message"' | head -1)
+        
+        echo "   Monitor: Phase=$phase"
+        
+        # Check for revision mismatch
+        if [[ "$message" == *"cannot reference a different revision"* ]]; then
+            echo "   ⚠️  Still resolving revision mismatch (this is normal initially)"
+            echo "   💡 IMPORTANT: Avoid Git commits until this resolves!"
+        elif [[ "$message" == *"waiting for completion of hook"* ]]; then
+            echo "   🎯 PostSync hook running - excellent progress!"
+        fi
         
         case "$phase" in
             "Succeeded")
@@ -121,58 +211,22 @@ wait_for_sync() {
                 return 0
                 ;;
             "Failed")
-                echo "   ❌ Sync failed!"
-                local message
-                message=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.operationState.message // "No message"')
-                echo "   Error: $message"
+                echo "   ❌ Sync failed: $message"
                 return 1
-                ;;
-            "Running")
-                echo "   🔄 Sync in progress... (${wait_time}s elapsed)"
-                ;;
-            *)
-                echo "   ⏳ Waiting for sync to start... (${wait_time}s elapsed)"
                 ;;
         esac
         
-        sleep 10
-        wait_time=$((wait_time + 10))
+        sleep 30
+        wait_time=$((wait_time + 30))
     done
     
-    echo "   ⏰ Timeout waiting for sync to complete"
+    echo "   ⏰ Timeout, but application may still be progressing"
     return 1
 }
 
-# Function to verify fix
-verify_fix() {
-    local app_name=$1
-    
-    echo "🔍 Verifying fix for $app_name..."
-    
-    if has_revision_mismatch "$app_name"; then
-        echo "   ❌ Revision mismatch still exists"
-        return 1
-    else
-        local sync_status
-        sync_status=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.sync.status // "Unknown"')
-        local health_status
-        health_status=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.health.status // "Unknown"')
-        
-        echo "   📊 Current Status: Sync=$sync_status, Health=$health_status"
-        
-        if [[ "$sync_status" == "Synced" ]]; then
-            echo "   ✅ Fix successful! Application is now synced"
-            return 0
-        else
-            echo "   ⚠️  Application synced but may need more time to become healthy"
-            return 0
-        fi
-    fi
-}
-
-# Function to fix all applications with revision mismatch
+# Function to fix all problematic applications
 fix_all_apps() {
-    echo "🔍 Scanning for applications with Git revision mismatch..."
+    echo "🔍 Scanning for applications with issues..."
     
     local apps_with_issues=()
     local apps
@@ -183,29 +237,32 @@ fix_all_apps() {
         exit 1
     fi
     
-    # Find applications with revision mismatch
+    # Find problematic applications
     for app in $apps; do
-        if has_revision_mismatch "$app"; then
+        if has_revision_mismatch "$app" || is_stuck_in_retry_loop "$app"; then
             apps_with_issues+=("$app")
-            echo "   🚨 Found revision mismatch in: $app"
+            echo "   🚨 Found issue in: $app"
         fi
     done
     
     if [[ ${#apps_with_issues[@]} -eq 0 ]]; then
-        echo "✅ No applications with Git revision mismatch found!"
+        echo "✅ No applications with issues found!"
         exit 0
     fi
     
     echo ""
-    echo "📋 Found ${#apps_with_issues[@]} application(s) with revision mismatch:"
+    echo "📋 Found ${#apps_with_issues[@]} application(s) with issues:"
     printf '   - %s\n' "${apps_with_issues[@]}"
     echo ""
     
     if [[ "$DRY_RUN" != "true" ]]; then
-        read -p "🤔 Do you want to fix all these applications? (y/N): " -n 1 -r
+        echo "⚠️  WARNING: This will delete and recreate applications!"
+        echo "⚠️  WARNING: Do NOT make Git commits during this process!"
+        echo ""
+        read -p "🤔 Proceed with comprehensive fix? (y/N): " -n 1 -r
         echo
         if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            echo "❌ Operation cancelled by user"
+            echo "❌ Operation cancelled"
             exit 0
         fi
     fi
@@ -216,48 +273,28 @@ fix_all_apps() {
     
     for app in "${apps_with_issues[@]}"; do
         echo ""
-        echo "🔧 Fixing application: $app"
-        echo "================================"
-        
-        if clear_app_cache "$app"; then
-            if [[ "$DRY_RUN" != "true" ]]; then
-                if wait_for_sync "$app" 120; then  # 2 minute timeout per app
-                    if verify_fix "$app"; then
-                        fixed_count=$((fixed_count + 1))
-                        echo "   🎉 Successfully fixed $app"
-                    else
-                        failed_count=$((failed_count + 1))
-                        echo "   ⚠️  $app may need manual attention"
-                    fi
-                else
-                    failed_count=$((failed_count + 1))
-                    echo "   ❌ Failed to sync $app within timeout"
-                fi
-            else
-                echo "   [DRY RUN] Would fix $app"
-                fixed_count=$((fixed_count + 1))
-            fi
+        if comprehensive_fix "$app"; then
+            fixed_count=$((fixed_count + 1))
+            echo "   🎉 Successfully fixed $app"
         else
             failed_count=$((failed_count + 1))
-            echo "   ❌ Failed to clear cache for $app"
+            echo "   ⚠️  $app may need manual attention"
         fi
     done
     
     # Summary
     echo ""
-    echo "📊 FIX SUMMARY"
-    echo "=============="
+    echo "📊 COMPREHENSIVE FIX SUMMARY"
+    echo "============================"
     echo "Applications processed: ${#apps_with_issues[@]}"
     echo "Successfully fixed: $fixed_count"
     echo "Failed or need attention: $failed_count"
+    echo ""
+    echo "💡 KEY LESSON: Avoid Git commits during ArgoCD sync operations!"
     
     if [[ $failed_count -gt 0 ]]; then
-        echo ""
-        echo "⚠️  Some applications may need manual attention."
-        echo "   Check their status with: kubectl get applications -n $NAMESPACE"
         exit 1
     else
-        echo ""
         echo "🎉 All applications fixed successfully!"
         exit 0
     fi
@@ -269,85 +306,45 @@ fix_single_app() {
     
     echo "🔍 Checking application: $app_name"
     
-    # Check if application exists
     if ! kubectl get application "$app_name" -n "$NAMESPACE" &>/dev/null; then
         echo "❌ Application '$app_name' not found in namespace '$NAMESPACE'"
         exit 1
     fi
     
-    # Check if it has revision mismatch
-    if ! has_revision_mismatch "$app_name"; then
-        echo "ℹ️  Application '$app_name' does not have a Git revision mismatch"
-        
-        local sync_status
-        sync_status=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.sync.status // "Unknown"')
-        local health_status
-        health_status=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json | jq -r '.status.health.status // "Unknown"')
-        
-        echo "   Current Status: Sync=$sync_status, Health=$health_status"
-        
-        if [[ "$sync_status" == "Synced" && "$health_status" == "Healthy" ]]; then
-            echo "✅ Application is already healthy!"
-            exit 0
-        else
-            echo "⚠️  Application has other issues. Attempting cache clear anyway..."
-        fi
-    else
-        echo "🚨 Git revision mismatch detected in '$app_name'"
-    fi
-    
     echo ""
-    echo "🔧 Fixing application: $app_name"
-    echo "==============================="
-    
-    if clear_app_cache "$app_name"; then
-        if [[ "$DRY_RUN" != "true" ]]; then
-            if wait_for_sync "$app_name"; then
-                verify_fix "$app_name"
-                echo "🎉 Fix process completed for $app_name"
-            else
-                echo "❌ Sync did not complete within timeout"
-                exit 1
-            fi
-        else
-            echo "[DRY RUN] Would fix $app_name"
-        fi
+    if comprehensive_fix "$app_name"; then
+        echo ""
+        echo "🎉 Comprehensive fix completed for $app_name"
+        echo "💡 Remember: Avoid Git commits during ArgoCD operations!"
     else
-        echo "❌ Failed to clear cache for $app_name"
+        echo ""
+        echo "❌ Fix may need more time or manual intervention"
         exit 1
     fi
 }
 
 # Help function
 show_help() {
-    echo "ArgoCD Git Revision Mismatch Fixer"
+    echo "ArgoCD Git Revision Mismatch Fixer (COMPREHENSIVE)"
+    echo ""
+    echo "Uses the PROVEN method that actually works:"
+    echo "1. Delete and recreate stuck applications"
+    echo "2. Restart ArgoCD repo server (clear Git cache)"
+    echo "3. Wait for stabilization (no Git commits!)"
+    echo "4. Monitor for successful completion"
     echo ""
     echo "Usage: $0 [OPTIONS] [APP_NAME] [NAMESPACE]"
     echo ""
     echo "OPTIONS:"
-    echo "  -h, --help     Show this help message"
-    echo "  --dry-run      Show what would be done without making changes"
-    echo ""
-    echo "ARGUMENTS:"
-    echo "  APP_NAME       Specific application to fix (optional)"
-    echo "  NAMESPACE      ArgoCD namespace (default: argocd)"
-    echo ""
-    echo "ENVIRONMENT VARIABLES:"
-    echo "  DRY_RUN=true   Enable dry-run mode"
+    echo "  -h, --help     Show this help"
+    echo "  --dry-run      Show what would be done"
     echo ""
     echo "Examples:"
-    echo "  $0                                    # Fix all applications with mismatch"
-    echo "  $0 my-app                            # Fix specific application"
-    echo "  $0 my-app argocd-system              # Fix app in specific namespace"
-    echo "  DRY_RUN=true $0                      # Dry-run mode"
-    echo "  $0 --dry-run my-app                  # Dry-run for specific app"
+    echo "  $0                           # Fix all problematic apps"
+    echo "  $0 my-app                    # Fix specific app"
+    echo "  $0 --dry-run                 # Dry-run mode"
     echo ""
-    echo "This script fixes Git revision mismatch issues by:"
-    echo "1. Hard refreshing ArgoCD cache"
-    echo "2. Clearing existing sync operations"
-    echo "3. Forcing sync to HEAD revision"
-    echo "4. Waiting for sync completion"
-    echo "5. Verifying the fix"
+    echo "⚠️  CRITICAL: Do NOT make Git commits while this runs!"
 }
 
 # Main function
@@ -361,7 +358,7 @@ main() {
     fi
 }
 
-# Parse command line arguments
+# Parse arguments
 case "${1:-}" in
     -h|--help)
         show_help
