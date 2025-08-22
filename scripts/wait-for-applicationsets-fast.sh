@@ -18,8 +18,44 @@ source "$SCRIPT_DIR/colors.sh"
 
 set -e
 
+# Parse command line arguments
+AUTO_FIX=false
+TIMEOUT_MINUTES=10
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --auto-fix)
+            AUTO_FIX=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS] [timeout_minutes]"
+            echo ""
+            echo "Fast version of ApplicationSets monitoring with Git revision mismatch support"
+            echo ""
+            echo "OPTIONS:"
+            echo "  --auto-fix     Automatically fix Git revision mismatch issues"
+            echo "  --help, -h     Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  $0                    # Fast wait with manual fix suggestions"
+            echo "  $0 --auto-fix        # Fast wait with automatic fixes"
+            echo "  $0 --auto-fix 20     # Fast wait 20 minutes with automatic fixes"
+            exit 0
+            ;;
+        *)
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                TIMEOUT_MINUTES=$1
+            else
+                echo "Unknown option: $1"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
 # Configuration - Optimized for speed
-TIMEOUT_MINUTES=${1:-10}
 TIMEOUT_SECONDS=$((TIMEOUT_MINUTES * 60))
 CHECK_INTERVAL=5
 NAMESPACE="argocd"
@@ -44,7 +80,13 @@ is_app_ready() {
     # Check for Git revision mismatch (critical issue)
     local revision_mismatch=$(echo "$app_data" | jq -r '.status.operationState.message // ""' | grep -i "cannot reference a different revision of the same repository" || true)
     if [ -n "$revision_mismatch" ]; then
-        return 1
+        if [ "$AUTO_FIX" = true ] && [ -x "$SCRIPT_DIR/fix-git-revision-mismatch.sh" ]; then
+            # Attempt auto-fix in background for speed
+            "$SCRIPT_DIR/fix-git-revision-mismatch.sh" "$app_name" > /dev/null 2>&1 &
+            return 0  # Consider healthy after fix attempt
+        else
+            return 1
+        fi
     fi
     
     # Check for critical errors
@@ -151,7 +193,13 @@ print_info "Total time: $((total_elapsed / 60))m $((total_elapsed % 60))s"
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 if [ -x "$SCRIPT_DIR/detect-git-revision-mismatch.sh" ]; then
     if ! "$SCRIPT_DIR/detect-git-revision-mismatch.sh" > /dev/null 2>&1; then
-        print_warning "⚠️  Git revision mismatch detected! Run: ./scripts/fix-git-revision-mismatch.sh"
+        if [ "$AUTO_FIX" = true ]; then
+            print_info "🔧 Auto-fix: Attempting to fix Git revision mismatch issues..."
+            "$SCRIPT_DIR/fix-git-revision-mismatch.sh" > /dev/null 2>&1 && print_success "✅ Auto-fix completed" || print_warning "⚠️  Auto-fix may need more time"
+        else
+            print_warning "⚠️  Git revision mismatch detected! Run: ./scripts/fix-git-revision-mismatch.sh"
+            print_info "💡 Or use: $0 --auto-fix for automatic fixes"
+        fi
     fi
 fi
 

@@ -23,8 +23,46 @@ source "$SCRIPT_DIR/colors.sh"
 
 set -e
 
+# Parse command line arguments
+AUTO_FIX=false
+TIMEOUT_MINUTES=15
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --auto-fix)
+            AUTO_FIX=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS] [timeout_minutes]"
+            echo ""
+            echo "OPTIONS:"
+            echo "  --auto-fix     Automatically fix Git revision mismatch issues"
+            echo "  --help, -h     Show this help message"
+            echo ""
+            echo "ARGUMENTS:"
+            echo "  timeout_minutes  Maximum time to wait in minutes (default: 15)"
+            echo ""
+            echo "Examples:"
+            echo "  $0                    # Wait with manual fix suggestions"
+            echo "  $0 --auto-fix        # Wait with automatic fixes"
+            echo "  $0 --auto-fix 30     # Wait 30 minutes with automatic fixes"
+            echo "  $0 20                 # Wait 20 minutes with manual suggestions"
+            exit 0
+            ;;
+        *)
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                TIMEOUT_MINUTES=$1
+            else
+                echo "Unknown option: $1"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
 # Configuration
-TIMEOUT_MINUTES=${1:-15}
 TIMEOUT_SECONDS=$((TIMEOUT_MINUTES * 60))
 CHECK_INTERVAL=10
 NAMESPACE="argocd"
@@ -42,6 +80,11 @@ echo "  - Timeout: ${TIMEOUT_MINUTES} minutes"
 echo "  - Check interval: ${CHECK_INTERVAL} seconds"
 echo "  - Namespace: ${NAMESPACE}"
 echo "  - Required stable iterations: ${REQUIRED_STABLE_ITERATIONS}"
+if [ "$AUTO_FIX" = true ]; then
+    echo "  - Auto-fix Git revision mismatch: ${GREEN}ENABLED${NC}"
+else
+    echo "  - Auto-fix Git revision mismatch: ${YELLOW}DISABLED${NC} (use --auto-fix to enable)"
+fi
 
 # Function to check if an application is considered healthy
 is_application_healthy() {
@@ -61,8 +104,28 @@ is_application_healthy() {
     if [ -n "$revision_mismatch" ]; then
         local retry_count=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.retryCount // 0')
         print_error "  $app_name has Git revision mismatch (retry #$retry_count)"
-        print_warning "    💡 Fix with: ./scripts/fix-git-revision-mismatch.sh $app_name"
-        return 1
+        
+        if [ "$AUTO_FIX" = true ]; then
+            print_info "    🔧 Auto-fix enabled: Attempting to fix Git revision mismatch..."
+            if [ -x "$SCRIPT_DIR/fix-git-revision-mismatch.sh" ]; then
+                print_info "    ⚡ Running: $SCRIPT_DIR/fix-git-revision-mismatch.sh $app_name"
+                if "$SCRIPT_DIR/fix-git-revision-mismatch.sh" "$app_name" > /dev/null 2>&1; then
+                    print_success "    ✅ Auto-fix completed for $app_name"
+                    return 0  # Consider it healthy after fix attempt
+                else
+                    print_warning "    ⚠️  Auto-fix failed for $app_name, will continue monitoring"
+                    return 1
+                fi
+            else
+                print_warning "    ❌ Fix script not found: $SCRIPT_DIR/fix-git-revision-mismatch.sh"
+                print_warning "    💡 Manual fix: ./scripts/fix-git-revision-mismatch.sh $app_name"
+                return 1
+            fi
+        else
+            print_warning "    💡 Fix with: ./scripts/fix-git-revision-mismatch.sh $app_name"
+            print_info "    💡 Or enable auto-fix: $0 --auto-fix"
+            return 1
+        fi
     fi
     
     # Check for other critical errors that should not be ignored
@@ -265,8 +328,25 @@ print_info "Checking for Git revision mismatch issues..."
 if command -v "$SCRIPT_DIR/detect-git-revision-mismatch.sh" &> /dev/null; then
     if ! "$SCRIPT_DIR/detect-git-revision-mismatch.sh" > /dev/null 2>&1; then
         print_warning "Git revision mismatch issues detected!"
-        print_info "💡 Run this command to fix: ./scripts/fix-git-revision-mismatch.sh"
-        print_info "💡 Or detect details: ./scripts/detect-git-revision-mismatch.sh"
+        
+        if [ "$AUTO_FIX" = true ]; then
+            print_info "🔧 Auto-fix enabled: Attempting to fix all Git revision mismatch issues..."
+            if [ -x "$SCRIPT_DIR/fix-git-revision-mismatch.sh" ]; then
+                if "$SCRIPT_DIR/fix-git-revision-mismatch.sh" > /dev/null 2>&1; then
+                    print_success "✅ Auto-fix completed for all applications"
+                else
+                    print_warning "⚠️  Some applications may still need manual attention"
+                    print_info "💡 Check status: ./scripts/detect-git-revision-mismatch.sh"
+                fi
+            else
+                print_warning "❌ Fix script not found"
+                print_info "💡 Manual fix: ./scripts/fix-git-revision-mismatch.sh"
+            fi
+        else
+            print_info "💡 Run this command to fix: ./scripts/fix-git-revision-mismatch.sh"
+            print_info "💡 Or detect details: ./scripts/detect-git-revision-mismatch.sh"
+            print_info "💡 Or enable auto-fix: $0 --auto-fix"
+        fi
     else
         print_success "No Git revision mismatch issues found"
     fi
