@@ -56,6 +56,15 @@ is_application_healthy() {
         return 1
     fi
     
+    # Check for Git revision mismatch errors (critical issue)
+    local revision_mismatch=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.message // ""' | grep -i "cannot reference a different revision of the same repository" || true)
+    if [ -n "$revision_mismatch" ]; then
+        local retry_count=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.operationState.retryCount // 0')
+        print_error "  $app_name has Git revision mismatch (retry #$retry_count)"
+        print_warning "    💡 Fix with: ./scripts/fix-git-revision-mismatch.sh $app_name"
+        return 1
+    fi
+    
     # Check for other critical errors that should not be ignored
     local critical_errors=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null | jq -r '.status.conditions[]?.message // ""' | grep -i -E "(failed to generate manifest|repository not found|authentication failed)" || true)
     if [ -n "$critical_errors" ]; then
@@ -250,6 +259,20 @@ done
 print_header "Deployment Summary"
 get_applicationset_detailed_status > /dev/null
 get_application_status > /dev/null
+
+# Check for Git revision mismatch issues
+print_info "Checking for Git revision mismatch issues..."
+if command -v "$SCRIPT_DIR/detect-git-revision-mismatch.sh" &> /dev/null; then
+    if ! "$SCRIPT_DIR/detect-git-revision-mismatch.sh" > /dev/null 2>&1; then
+        print_warning "Git revision mismatch issues detected!"
+        print_info "💡 Run this command to fix: ./scripts/fix-git-revision-mismatch.sh"
+        print_info "💡 Or detect details: ./scripts/detect-git-revision-mismatch.sh"
+    else
+        print_success "No Git revision mismatch issues found"
+    fi
+else
+    print_info "Git revision mismatch detection script not found"
+fi
 
 current_time=$(date +%s)
 total_elapsed=$((current_time - START_TIME))

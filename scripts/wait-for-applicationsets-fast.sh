@@ -41,6 +41,12 @@ is_app_ready() {
     # Get app status in one call
     local app_data=$(kubectl get application "$app_name" -n "$NAMESPACE" -o json 2>/dev/null)
     
+    # Check for Git revision mismatch (critical issue)
+    local revision_mismatch=$(echo "$app_data" | jq -r '.status.operationState.message // ""' | grep -i "cannot reference a different revision of the same repository" || true)
+    if [ -n "$revision_mismatch" ]; then
+        return 1
+    fi
+    
     # Check for critical errors
     local critical_errors=$(echo "$app_data" | jq -r '.status.conditions[]?.message // ""' | grep -i -E "(app path does not exist|failed to generate|repository not found|authentication failed)" || true)
     if [ -n "$critical_errors" ]; then
@@ -140,6 +146,14 @@ total_elapsed=$(($(date +%s) - START_TIME))
 
 print_info "ApplicationSets: $appset_count | Applications: $app_count"
 print_info "Total time: $((total_elapsed / 60))m $((total_elapsed % 60))s"
+
+# Quick check for Git revision mismatch
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if [ -x "$SCRIPT_DIR/detect-git-revision-mismatch.sh" ]; then
+    if ! "$SCRIPT_DIR/detect-git-revision-mismatch.sh" > /dev/null 2>&1; then
+        print_warning "⚠️  Git revision mismatch detected! Run: ./scripts/fix-git-revision-mismatch.sh"
+    fi
+fi
 
 # Show access info
 DOMAIN_NAME=$(kubectl get secret peeks-hub-cluster -n argocd -o json 2>/dev/null | jq -r '.metadata.annotations.ingress_domain_name // ""')
