@@ -189,6 +189,8 @@ locals {
       ide_password_hash = local.password_hash
       ide_password_key = local.password_key
       backstage_image = local.backstage_image
+      backstage_postgres_secret_name = "peeks-workshop-gitops-backstage-postgresql-password"
+      backstage_postgres_secret_key = "password"
     },
 
   )

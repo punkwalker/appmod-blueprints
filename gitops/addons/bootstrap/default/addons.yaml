@@ -548,6 +548,8 @@ keycloak:
         values: ['true']
   valuesObject:
     ingress_domain_name: '{{.metadata.annotations.ingress_domain_name}}'
+    aws:
+      region: '{{.metadata.annotations.aws_region}}'
   ignoreDifferences:
     - group: external-secrets.io
       kind: ExternalSecret
