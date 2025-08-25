@@ -1,0 +1,30 @@
+# values for the addon
+deployment:
+  tolerations:
+    - key: CriticalAddonsOnly
+      operator: Exists
+  nodeSelector:
+    eks.amazonaws.com/compute-type: auto
+    kubernetes.io/os: linux
+    karpenter.sh/nodepool: system
+
+# ACK EKS Controller configuration
+ack:
+  eks:
+    # Use the management account for now since we're in single account mode
+    roleArn: ""
+    # Enable cross-account access
+    crossAccount:
+      enabled: false
+      # This will be enabled when proper multi-account setup is configured
+      # roleArn: "arn:aws:iam::665742499430:role/eks-cluster-mgmt-eks"
+    
+# Pod Identity configuration for ACK controllers
+podIdentity:
+  enabled: true
+  serviceAccount: ack-eks-controller
+  
+# Ensure proper permissions for single account operation
+singleAccount:
+  enabled: true
+  accountId: "665742499430"

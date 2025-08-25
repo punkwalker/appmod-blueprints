@@ -1,0 +1,12 @@
+keycloak:
+  enabled: true
+  domainName: "d3n3wb604kark5.cloudfront.net"
+  
+# Enable temporary secret creation
+tempSecret:
+  enabled: true
+  
+# Force keycloak configuration job to run
+configJob:
+  enabled: true
+  image: "public.ecr.aws/docker/library/alpine:3.18"

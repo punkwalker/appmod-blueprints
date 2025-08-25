@@ -1,0 +1,52 @@
+podIdentity:
+  enabled: true
+  region: us-east-1
+  accountId: "665742499430"
+  create: true
+  podIdentityPolicyCreate: true
+  podIdentityRole:
+    description: "External Secrets IAM Role for AWS Secrets Manager access"
+    managedPolicies: []
+    policyRefs:
+      - name: "external-secrets-policy"
+        namespace: external-secrets
+  podIdentityAssociation:
+    clusterName: peeks-hub-cluster
+    namespace: external-secrets
+    serviceAccounts:
+      - external-secrets-sa
+  podIdentityPolicy:
+    description: "External Secrets Policy for AWS Secrets Manager and SSM access"
+    policies:
+      - resourceType: secretsmanager
+        resourceName: "*"
+        actions:
+          - "secretsmanager:GetResourcePolicy"
+          - "secretsmanager:GetSecretValue"
+          - "secretsmanager:DescribeSecret"
+          - "secretsmanager:ListSecretVersionIds"
+          - "secretsmanager:CreateSecret"
+          - "secretsmanager:PutSecretValue"
+          - "secretsmanager:TagResource"
+          - "secretsmanager:UpdateSecret"
+      - resourceType: secretsmanager
+        resourceName: "*"
+        actions:
+          - "secretsmanager:DeleteSecret"
+        conditions:
+          - test: "StringEquals"
+            variable: "secretsmanager:ResourceTag/managed-by"
+            values:
+              - "external-secrets"
+      - resourceType: ssm
+        resourceName: "*"
+        actions:
+          - "ssm:DescribeParameters"
+          - "ssm:GetParameter"
+          - "ssm:GetParameters"
+          - "ssm:GetParametersByPath"
+      - resourceType: kms
+        resourceName: "*"
+        actions:
+          - "kms:Decrypt"
+          - "kms:DescribeKey"
