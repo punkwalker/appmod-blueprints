@@ -45,9 +45,7 @@ Enhanced the External Secret configuration:
 ```yaml
 spec:
   refreshInterval: "30s"          # Regular refresh every 30 seconds
-  retrySettings:
-    retryInterval: "15s"          # Retry failed syncs every 15 seconds
-    maxRetries: 5                 # Maximum 5 retry attempts
+  # Note: retrySettings requires ESO v0.11.0+, using init container for reliability instead
 ```
 
 ### 3. Init Container
