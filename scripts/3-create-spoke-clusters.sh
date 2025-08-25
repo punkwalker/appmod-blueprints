@@ -38,20 +38,20 @@ source "$SCRIPT_DIR/colors.sh"
 print_header "Creating Spoke EKS Clusters"
 
 print_step "Configuring spoke cluster accounts in Argo CD application for ACK controller"
-sed -i 's/MANAGEMENT_ACCOUNT_ID/'"$MGMT_ACCOUNT_ID"'/g' "$WORKSPACE_PATH/$WORKING_REPO/addons/tenants/tenant1/default/addons/multi-acct/values.yaml"
+sed -i 's/MANAGEMENT_ACCOUNT_ID/'"$MGMT_ACCOUNT_ID"'/g' "$WORKSPACE_PATH/$WORKING_REPO/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml"
 
 print_step "Activating the account numbers"
-sed -i 's/# \(cluster-test: "[0-9]*"\)/\1/g; s/# \(cluster-pre-prod: "[0-9]*"\)/\1/g; s/# \(cluster-prod-eu: "[0-9]*"\)/\1/g; s/# \(cluster-prod-us: "[0-9]*"\)/\1/g' $WORKSPACE_PATH/$WORKING_REPO/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+sed -i 's/# \(cluster-test: "[0-9]*"\)/\1/g; s/# \(cluster-pre-prod: "[0-9]*"\)/\1/g; s/# \(cluster-prod-eu: "[0-9]*"\)/\1/g; s/# \(cluster-prod-us: "[0-9]*"\)/\1/g' $WORKSPACE_PATH/$WORKING_REPO/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
 
 print_info "Opening multi-acct values.yaml file for review"
-/usr/lib/code-server/bin/code-server $WORKSPACE_PATH/$WORKING_REPO/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+/usr/lib/code-server/bin/code-server $WORKSPACE_PATH/$WORKING_REPO/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
 
 print_step "Committing changes for namespaces and resources"
 cd $WORKSPACE_PATH/$WORKING_REPO/
 git status
 git add .
 git commit -m "add namespaces and resources for clusters"
-git push
+git push origin $WORKSHOP_GIT_BRANCH:main
 
 print_step "Syncing the cluster-workloads application"
 argocd app sync multi-acct-hub-cluster
@@ -60,10 +60,10 @@ print_step "Waiting for the rollouts-demo-kargo application to be synced and hea
 argocd app wait multi-acct-hub-cluster --health --sync
 
 print_step "Updating cluster definitions with Management account ID"
-sed -i 's/MANAGEMENT_ACCOUNT_ID/'"$MGMT_ACCOUNT_ID"'/g' "$WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
-sed -i 's|GITLAB_URL|'"$GITLAB_URL"'|g' "$WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
-sed -i 's/GIT_USERNAME/'"$GIT_USERNAME"'/g' "$WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
-sed -i 's/WORKING_REPO/'"$WORKING_REPO"'/g' "$WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
+sed -i 's/MANAGEMENT_ACCOUNT_ID/'"$MGMT_ACCOUNT_ID"'/g' "$WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
+sed -i 's|GITLAB_URL|'"$GITLAB_URL"'|g' "$WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
+sed -i 's/GIT_USERNAME/'"$GIT_USERNAME"'/g' "$WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
+sed -i 's/WORKING_REPO/'"$WORKING_REPO"'/g' "$WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml"
 
 print_step "Enabling fleet spoke clusters"
 sed -i '
@@ -85,17 +85,17 @@ s/^  # cluster-prod-eu:/  cluster-prod-eu:/g
 }
 /^  cluster-prod-eu:/,/^  # workload-cluster1:/ {
   /^  # workload-cluster1:/!s/^  #/  /g
-}' $WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+}' $WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
 
 print_info "Opening cluster values.yaml file for review"
-/usr/lib/code-server/bin/code-server $WORKSPACE_PATH/$WORKING_REPO/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+/usr/lib/code-server/bin/code-server $WORKSPACE_PATH/$WORKING_REPO/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
 
 print_step "Committing changes to Git repository"
 cd $WORKSPACE_PATH/$WORKING_REPO/
 git status
 git add .
 git commit -m "add clusters definitions"
-git push
+git push origin $WORKSHOP_GIT_BRANCH:main
 
 sleep 10
 
