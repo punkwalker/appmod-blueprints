@@ -246,7 +246,7 @@ metadata:
   name: backstage
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/sync-wave: "25"
 spec:
   replicas: 1
   selector:
@@ -257,6 +257,23 @@ spec:
       labels:
         app: backstage
     spec:
+      initContainers:
+        - name: wait-for-secrets
+          image: busybox:1.35
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for backstage-env-vars secret to be ready..."
+              until [ -f /var/secrets/KEYCLOAK_CLIENT_SECRET ] && [ -s /var/secrets/KEYCLOAK_CLIENT_SECRET ]; do
+                echo "Secret not ready yet, waiting..."
+                sleep 5
+              done
+              echo "Secret is ready!"
+          volumeMounts:
+            - name: backstage-env-vars
+              mountPath: /var/secrets
+              readOnly: true
       containers:
         - command:
             - node
@@ -386,11 +403,17 @@ kind: ExternalSecret
 metadata:
   name: backstage-oidc
   namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   secretStoreRef:
     name: keycloak
     kind: ClusterSecretStore
-  refreshInterval: "0"
+  refreshInterval: "30s"
+  retrySettings:
+    retryInterval: "15s"
+    maxRetries: 5
   target:
     name: backstage-env-vars
     template:
