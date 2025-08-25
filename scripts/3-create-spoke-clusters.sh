@@ -30,7 +30,7 @@
 #   Run after 2-bootstrap-accounts.sh and before 4-deploy-argo-rollouts-demo.sh
 #
 #############################################################################
-
+set -x
 # Source the colors script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/colors.sh"
