@@ -76,9 +76,7 @@ export GITLAB_URL=https://$(aws cloudfront list-distributions --query "Distribut
 export NLB_DNS=$(aws elbv2 describe-load-balancers --region $AWS_REGION --names gitlab --query 'LoadBalancers[0].DNSName' --output text)
 update_workshop_var "GITLAB_URL" "$GITLAB_URL"
 update_workshop_var "NLB_DNS" "$NLB_DNS"
-
 update_workshop_var "GIT_USERNAME" "user1"
-
 update_workshop_var "WORKSPACE_PATH" "$HOME/environment" 
 update_workshop_var "WORKING_REPO" "platform-on-eks-workshop"
 
@@ -98,7 +96,8 @@ git add . && git commit -m "Update Backstage Templates" || true
 
 set -x
 pwd
-git push --set-upstream origin main
+# Push the local branch (WORKSHOP_GIT_BRANCH) to the remote main branch
+git push --set-upstream origin $WORKSHOP_GIT_BRANCH:main
 set +x
 
 print_step "Creating GitLab access token for ArgoCD"
