@@ -10,6 +10,10 @@ terraform {
       source  = "integrations/github"
       version = "~> 6.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.1"
+    }
   }
 
   # ##  Used for end-to-end testing on project; update to suit your needs

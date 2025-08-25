@@ -404,19 +404,6 @@ spec:
         requests:
           storage: "500Mi"
 ---
-apiVersion: generators.external-secrets.io/v1alpha1
-kind: Password
-metadata:
-  name: backstage
-  namespace: backstage
-spec:
-  length: 36
-  digits: 5
-  symbols: 5
-  symbolCharacters: "/-+"
-  noUpper: false
-  allowRepeat: true
----
 apiVersion: external-secrets.io/v1beta1
 kind: ExternalSecret
 metadata:
@@ -455,15 +442,10 @@ spec:
       remoteRef:
         key: keycloak-clients
         property: BACKSTAGE_CLIENT_SECRET
-  dataFrom:
-    - sourceRef:
-        generatorRef:
-          apiVersion: generators.external-secrets.io/v1alpha1
-          kind: Password
-          name: backstage
-      rewrite:
-        - transform:
-            template: "POSTGRES_PASSWORD"
+    - secretKey: POSTGRES_PASSWORD
+      remoteRef:
+        key: peeks-workshop-gitops-backstage-postgresql-password
+        property: password
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress

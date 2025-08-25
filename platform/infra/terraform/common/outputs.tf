@@ -22,3 +22,14 @@ output "iam_argocd_role_arn" {
   value       = aws_iam_role.argocd_central.arn
   description = "ARN of the IAM role for ArgoCD EKS access"
 }
+
+# Backstage PostgreSQL password secret outputs
+output "backstage_postgresql_secret_name" {
+  description = "Name of the AWS Secrets Manager secret containing the PostgreSQL password"
+  value       = aws_secretsmanager_secret.backstage_postgresql_password.name
+}
+
+output "backstage_postgresql_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing the PostgreSQL password"
+  value       = aws_secretsmanager_secret.backstage_postgresql_password.arn
+}
