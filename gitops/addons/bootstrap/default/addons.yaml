@@ -563,6 +563,20 @@ argo-workflows:
         values: ['true']
   valuesObject:
     ingress_domain_name: '{{.metadata.annotations.ingress_domain_name}}'
+  ignoreDifferences:
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jsonPointers:
+        - /status
+        - /metadata/resourceVersion
+        - /metadata/generation
+        - /metadata/managedFields
+    - group: ""
+      kind: Secret
+      name: keycloak-oidc
+      jsonPointers:
+        - /metadata/resourceVersion
+        - /metadata/managedFields
 
 kargo:
   enabled: false
