@@ -343,6 +343,9 @@ spec:
                     - key: k8s-config.yaml
                       path: k8s-config.yaml
                   name: k8s-config
+        - name: backstage-env-vars
+          secret:
+            secretName: backstage-env-vars
 ---
 apiVersion: apps/v1
 kind: StatefulSet
