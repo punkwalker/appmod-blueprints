@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
         - args:
-            - start-dev-dev
+            - start-dev
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
