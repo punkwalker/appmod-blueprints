@@ -58,6 +58,26 @@ resource "aws_cloudfront_distribution" "ingress" {
     origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
   }
 
+  # Specific cache behavior for Keycloak resources to fix iframe and static resource issues
+  ordered_cache_behavior {
+    path_pattern     = "/keycloak/*"
+    allowed_methods  = ["DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"]
+    cached_methods   = ["GET", "HEAD"]
+    target_origin_id = "http-origin"
+
+    viewer_protocol_policy = "redirect-to-https"
+    compress               = false
+
+    # Use no-cache policy for Keycloak to avoid caching issues with dynamic content
+    cache_policy_id          = data.aws_cloudfront_cache_policy.use_origin_cache_control_headers_query_strings.id
+    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+
+    # Ensure all headers and query strings are forwarded for Keycloak
+    min_ttl     = 0
+    default_ttl = 0
+    max_ttl     = 0
+  }
+
   viewer_certificate {
     cloudfront_default_certificate = true
     minimum_protocol_version       = "TLSv1"
