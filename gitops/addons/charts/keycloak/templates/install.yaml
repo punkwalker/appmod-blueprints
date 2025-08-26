@@ -27,6 +27,8 @@ metadata:
     app: keycloak
   name: keycloak
   namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
 spec:
   replicas: 1
   selector:
@@ -126,6 +128,8 @@ metadata:
     app: postgresql
   name: postgresql
   namespace: keycloak
+  annotations:
+    argocd.argoproj.io/sync-wave: "6"
 spec:
   replicas: 1
   selector:
