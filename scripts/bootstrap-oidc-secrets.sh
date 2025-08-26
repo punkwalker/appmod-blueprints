@@ -100,42 +100,8 @@ bootstrap_oidc_secrets() {
     
     print_success "All OIDC client secrets stored in AWS Secrets Manager"
     
-    # Create Kubernetes secret for backward compatibility and immediate availability
-    print_step "Creating Kubernetes keycloak-clients secret"
-    
-    # Ensure keycloak namespace exists
-    kubectl create namespace keycloak --dry-run=client -o yaml | kubectl apply -f -
-    
-    # Create the keycloak-clients secret
-    kubectl create secret generic keycloak-clients \
-        --namespace=keycloak \
-        --from-literal=ARGO_WORKFLOWS_CLIENT_SECRET="$ARGO_WORKFLOWS_CLIENT_SECRET" \
-        --from-literal=ARGO_WORKFLOWS_CLIENT_ID="argo-workflows" \
-        --from-literal=ARGOCD_SESSION_TOKEN="$ARGOCD_SESSION_TOKEN" \
-        --from-literal=BACKSTAGE_CLIENT_SECRET="$BACKSTAGE_CLIENT_SECRET" \
-        --from-literal=BACKSTAGE_CLIENT_ID="backstage" \
-        --from-literal=ARGOCD_CLIENT_SECRET="$ARGOCD_CLIENT_SECRET" \
-        --from-literal=ARGOCD_CLIENT_ID="argocd" \
-        --dry-run=client -o yaml | \
-    kubectl apply -f -
-    
-    # Add annotations and labels to the secret
-    kubectl annotate secret keycloak-clients -n keycloak \
-        managed-by=bootstrap-script \
-        aws-secrets-manager-backup=true \
-        secret-source=bootstrap-pre-creation \
-        last-updated="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-        --overwrite
-    
-    kubectl label secret keycloak-clients -n keycloak \
-        app.kubernetes.io/managed-by=bootstrap-script \
-        secret-type=oidc-client \
-        backup-location=aws-secrets-manager \
-        --overwrite
-    
-    print_success "Kubernetes keycloak-clients secret created"
-    
     print_success "OIDC client secrets bootstrap completed successfully!"
-    print_info "Secrets are now available in both AWS Secrets Manager and Kubernetes"
-    print_info "Applications can start immediately without waiting for Keycloak configuration"
+    print_info "Secrets are now available in AWS Secrets Manager"
+    print_info "Kubernetes secrets will be created by the Keycloak configuration job"
+    print_info "Applications can use External Secrets to access the pre-created secrets"
 }
