@@ -32,6 +32,11 @@ module "external_secrets_pod_identity" {
       namespace       = local.external_secrets.namespace
       service_account = local.external_secrets.service_account
     }
+    keycloak-config = {
+      cluster_name    = local.cluster_info.cluster_name
+      namespace       = "keycloak"
+      service_account = "keycloak-config"
+    }
   }
 
   tags = local.tags
@@ -284,4 +289,169 @@ resource "aws_eks_pod_identity_association" "kargo_controller" {
   namespace       = "kargo"
   service_account = "kargo-controller"
   role_arn        = aws_iam_role.kargo_controller_role.arn
+}
+
+################################################################################
+# ACK Workload Roles (Cross-Account Access)
+################################################################################
+
+# Create ACK workload roles that can be assumed by ACK controllers
+resource "aws_iam_role" "ack_workload_role" {
+  for_each = toset(["iam", "ec2", "eks"])
+  name     = "eks-cluster-mgmt-${each.key}"
+  
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          AWS = aws_iam_role.ack_controller[each.key].arn
+        }
+        Action = ["sts:AssumeRole", "sts:TagSession"]
+      }
+    ]
+  })
+  
+  description = "Workload role for ACK ${each.key} controller"
+  tags        = local.tags
+}
+
+# Define service-specific managed policies
+locals {
+  ack_managed_policies = {
+    iam = ["arn:aws:iam::aws:policy/IAMFullAccess"]
+    ec2 = [
+      "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
+      "arn:aws:iam::aws:policy/AmazonVPCFullAccess"
+    ]
+    eks = [
+      "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+      "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+      "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+      "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+    ]
+  }
+}
+
+# Attach managed policies to ACK workload roles
+resource "aws_iam_role_policy_attachment" "ack_workload_managed_policies" {
+  for_each = {
+    for combo in flatten([
+      for service, policies in local.ack_managed_policies : [
+        for policy in policies : {
+          service = service
+          policy  = policy
+          key     = "${service}-${replace(policy, "/[^a-zA-Z0-9]/", "-")}"
+        }
+      ]
+    ]) : combo.key => combo
+  }
+
+  role       = aws_iam_role.ack_workload_role[each.value.service].name
+  policy_arn = each.value.policy
+}
+
+# Define service-specific inline policies
+locals {
+  ack_inline_policies = {
+    iam = {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "iam:CreateRole",
+            "iam:DeleteRole",
+            "iam:GetRole",
+            "iam:UpdateRole",
+            "iam:ListRoles",
+            "iam:TagRole",
+            "iam:UntagRole",
+            "iam:AttachRolePolicy",
+            "iam:DetachRolePolicy",
+            "iam:ListAttachedRolePolicies",
+            "iam:CreatePolicy",
+            "iam:DeletePolicy",
+            "iam:GetPolicy",
+            "iam:ListPolicies",
+            "iam:CreatePolicyVersion",
+            "iam:DeletePolicyVersion",
+            "iam:GetPolicyVersion",
+            "iam:ListPolicyVersions"
+          ]
+          Resource = "*"
+        }
+      ]
+    }
+    ec2 = {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "ec2:CreateVpc",
+            "ec2:DeleteVpc",
+            "ec2:DescribeVpcs",
+            "ec2:ModifyVpcAttribute",
+            "ec2:CreateSubnet",
+            "ec2:DeleteSubnet",
+            "ec2:DescribeSubnets",
+            "ec2:ModifySubnetAttribute",
+            "ec2:CreateSecurityGroup",
+            "ec2:DeleteSecurityGroup",
+            "ec2:DescribeSecurityGroups",
+            "ec2:AuthorizeSecurityGroupIngress",
+            "ec2:AuthorizeSecurityGroupEgress",
+            "ec2:RevokeSecurityGroupIngress",
+            "ec2:RevokeSecurityGroupEgress",
+            "ec2:CreateTags",
+            "ec2:DeleteTags",
+            "ec2:DescribeTags"
+          ]
+          Resource = "*"
+        }
+      ]
+    }
+    eks = {
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Effect = "Allow"
+          Action = [
+            "eks:CreateCluster",
+            "eks:DeleteCluster",
+            "eks:DescribeCluster",
+            "eks:ListClusters",
+            "eks:UpdateClusterConfig",
+            "eks:UpdateClusterVersion",
+            "eks:TagResource",
+            "eks:UntagResource",
+            "eks:CreateNodegroup",
+            "eks:DeleteNodegroup",
+            "eks:DescribeNodegroup",
+            "eks:ListNodegroups",
+            "eks:UpdateNodegroupConfig",
+            "eks:UpdateNodegroupVersion",
+            "eks:CreateAddon",
+            "eks:DeleteAddon",
+            "eks:DescribeAddon",
+            "eks:ListAddons",
+            "eks:UpdateAddon",
+            "iam:PassRole"
+          ]
+          Resource = "*"
+        }
+      ]
+    }
+  }
+}
+
+# Attach inline policies to ACK workload roles
+resource "aws_iam_role_policy" "ack_workload_inline_policies" {
+  for_each = toset(["iam", "ec2", "eks"])
+
+  name   = "ack-${each.key}-workload-policy"
+  role   = aws_iam_role.ack_workload_role[each.key].name
+  policy = jsonencode(local.ack_inline_policies[each.key])
 }
