@@ -34,6 +34,7 @@
 # Source the colors script
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 source "$SCRIPT_DIR/colors.sh"
+source "$SCRIPT_DIR/bootstrap-oidc-secrets.sh"
 
 set -e
 #set -x
@@ -154,6 +155,9 @@ sleep 5
 
 print_step "Creating Amazon Elastic Container Repository (Amazon ECR) for Backstage image"
 aws ecr create-repository --repository-name backstage --region $AWS_REGION || true
+
+print_step "Pre-creating OIDC client secrets to break dependency cycles"
+bootstrap_oidc_secrets
 
 print_step "Building Backstage image"
 $SCRIPT_DIR/build_backstage.sh $WORKSHOP_DIR/backstage

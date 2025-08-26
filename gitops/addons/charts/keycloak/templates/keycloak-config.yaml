@@ -367,6 +367,19 @@ spec:
                 -X PUT --data @/tmp/user-password-to-be-applied.json \
                 ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/users/${USER2ID}/reset-password
 
+              # Get pre-existing OIDC client secrets from Kubernetes secret
+              echo "Retrieving pre-existing OIDC client secrets..."
+              ARGO_WORKFLOWS_CLIENT_SECRET=$(./kubectl get secret keycloak-clients -n keycloak -o jsonpath='{.data.ARGO_WORKFLOWS_CLIENT_SECRET}' | base64 -d)
+              BACKSTAGE_CLIENT_SECRET=$(./kubectl get secret keycloak-clients -n keycloak -o jsonpath='{.data.BACKSTAGE_CLIENT_SECRET}' | base64 -d)
+              ARGOCD_CLIENT_SECRET=$(./kubectl get secret keycloak-clients -n keycloak -o jsonpath='{.data.ARGOCD_CLIENT_SECRET}' | base64 -d)
+              
+              if [ -z "$ARGO_WORKFLOWS_CLIENT_SECRET" ] || [ -z "$BACKSTAGE_CLIENT_SECRET" ] || [ -z "$ARGOCD_CLIENT_SECRET" ]; then
+                echo "ERROR: Pre-existing OIDC client secrets not found. Bootstrap script should have created them."
+                exit 1
+              fi
+              
+              echo "✓ Retrieved pre-existing OIDC client secrets successfully"
+
               echo "creating Argo Workflows client"
               sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/argo-workflows-client-payload.json > /tmp/argo-workflows-client-payload.json
               curl -sS -H "Content-Type: application/json" \
@@ -385,11 +398,31 @@ spec:
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
                 -X PUT  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
 
-              ARGO_WORKFLOWS_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
-              -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-              -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID} | jq -e -r '.secret')
+              echo "creating Argo Workflows client with pre-existing secret"
+              sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/argo-workflows-client-payload.json > /tmp/argo-workflows-client-payload.json
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X POST --data @/tmp/argo-workflows-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients
 
-              echo "creating Backstage client"
+              CLIENT_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients | jq -e -r  '.[] | select(.clientId == "argo-workflows") | .id')
+              CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
+
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
+
+              # Set the pre-existing client secret
+              curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X PUT --data "{\"secret\":\"${ARGO_WORKFLOWS_CLIENT_SECRET}\"}" \
+                ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}
+
+              echo "creating Backstage client with pre-existing secret"
               sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/backstage-client-payload.json > /tmp/backstage-client-payload.json
               curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
@@ -403,11 +436,13 @@ spec:
               CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
               curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
 
-              BACKSTAGE_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+              # Set the pre-existing client secret
+              curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-                -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID} | jq -e -r '.secret')
+                -X PUT --data "{\"secret\":\"${BACKSTAGE_CLIENT_SECRET}\"}" \
+                ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}
 
-              echo "creating ArgoCD client"
+              echo "creating ArgoCD client with pre-existing secret"
               sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/argocd-client-payload.json > /tmp/argocd-client-payload.json
               curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
@@ -421,9 +456,11 @@ spec:
               CLIENT_SCOPE_GROUPS_ID=$(curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X GET  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/client-scopes | jq -e -r  '.[] | select(.name == "groups") | .id')
               curl -sS -H "Content-Type: application/json" -H "Authorization: bearer ${KEYCLOAK_TOKEN}" -X PUT  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}/default-client-scopes/${CLIENT_SCOPE_GROUPS_ID}
 
-              ARGOCD_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
+              # Set the pre-existing client secret
+              curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-                -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID} | jq -e -r '.secret')
+                -X PUT --data "{\"secret\":\"${ARGOCD_CLIENT_SECRET}\"}" \
+                ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID}
 
               echo "creating Kargo client"
               sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/kargo-client-payload.json > /tmp/kargo-client-payload.json
