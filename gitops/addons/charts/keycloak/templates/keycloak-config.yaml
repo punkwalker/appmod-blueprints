@@ -376,9 +376,14 @@ spec:
               # Get pre-existing OIDC client secrets from AWS Secrets Manager
               echo "Retrieving pre-existing OIDC client secrets from AWS Secrets Manager..."
               
-              # Install AWS CLI for retrieving secrets
-              echo "Installing AWS CLI..."
-              apt -qq install awscli -y
+              # Install AWS CLI v2 for retrieving secrets (supports EKS Pod Identity)
+              echo "Installing AWS CLI v2..."
+              curl -sS "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+              apt -qq install unzip -y
+              unzip -q awscliv2.zip
+              ./aws/install
+              # Ensure aws command uses the new installation
+              export PATH="/usr/local/bin:$PATH"
               
               # Retrieve secrets from AWS Secrets Manager
               PROJECT_PREFIX="peeks-workshop-gitops"
