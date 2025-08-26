@@ -41,7 +41,8 @@ spec:
     spec:
       containers:
         - args:
-            - start-dev
+            - start
+            - --optimized
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
@@ -100,6 +101,16 @@ data:
     http-enabled=true
     hostname-debug=true
     # .../keycloak/realms/platform/hostname-debug
+    
+    # Production mode settings
+    cache=ispn
+    cache-stack=kubernetes
+    
+    # Enable account console
+    features=account3
+    
+    # Theme settings
+    theme-cache-enabled=true
 
 kind: ConfigMap
 metadata:
