@@ -16,7 +16,7 @@ module "external_secrets_pod_identity" {
     "arn:aws:secretsmanager:${local.region}:*:secret:peeks-workshop-gitops-*"
   ]
   external_secrets_ssm_parameter_arns   = ["arn:aws:ssm:${local.region}:*:parameter/${local.cluster_info.cluster_name}/*"]
-  external_secrets_create_permission    = false
+  external_secrets_create_permission    = true
   attach_custom_policy                  = true
   policy_statements = [
     {
