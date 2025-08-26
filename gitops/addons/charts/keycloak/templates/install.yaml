@@ -101,9 +101,8 @@ data:
     hostname-debug=true
     # .../keycloak/realms/platform/hostname-debug
     
-    # Proxy configuration for CloudFront/ALB - try different syntax
-    proxy=edge
-    proxy-headers=xforwarded
+    # Proxy configuration for CloudFront/ALB - correct syntax
+    proxy-headers=forwarded,xforwarded
     
     # Enable account console and admin features
     features=account,admin
