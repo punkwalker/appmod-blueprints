@@ -354,6 +354,8 @@ metadata:
     app: postgresql
   name: postgresql
   namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   replicas: 1
   selector:
