@@ -2,6 +2,24 @@
 # CloudFront Distribution for Ingress NLB
 ################################################################################
 
+# Custom origin request policy for Keycloak to forward all required headers
+resource "aws_cloudfront_origin_request_policy" "keycloak_policy" {
+  name    = "KeycloakOriginRequestPolicy"
+  comment = "Origin request policy for Keycloak with all required headers"
+  
+  cookies_config {
+    cookie_behavior = "all"
+  }
+  
+  headers_config {
+    header_behavior = "allViewer"
+  }
+  
+  query_strings_config {
+    query_string_behavior = "all"
+  }
+}
+
 # Reference the managed policies by name instead of ID
 data "aws_cloudfront_cache_policy" "use_origin_cache_control_headers_query_strings" {
   name = "UseOriginCacheControlHeaders-QueryStrings"
@@ -70,7 +88,7 @@ resource "aws_cloudfront_distribution" "ingress" {
 
     # Use no-cache policy for Keycloak to avoid caching issues with dynamic content
     cache_policy_id          = data.aws_cloudfront_cache_policy.use_origin_cache_control_headers_query_strings.id
-    origin_request_policy_id = data.aws_cloudfront_origin_request_policy.all_viewer.id
+    origin_request_policy_id = aws_cloudfront_origin_request_policy.keycloak_policy.id
 
     # Ensure all headers and query strings are forwarded for Keycloak
     min_ttl     = 0
