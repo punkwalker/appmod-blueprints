@@ -264,7 +264,7 @@ spec:
             - sh
             - -c
             - |
-              echo "Waiting for backstage-env-vars secret to be ready..."
+              echo "Waiting for backstage-oidc-vars secret to be ready..."
               MAX_RETRIES=30
               RETRY_COUNT=0
               
@@ -290,7 +290,7 @@ spec:
               echo "ERROR: Secret not ready after $MAX_RETRIES attempts"
               exit 1
           volumeMounts:
-            - name: backstage-env-vars
+            - name: backstage-oidc-vars
               mountPath: /var/secrets
               readOnly: true
       containers:
@@ -315,6 +315,10 @@ spec:
           envFrom:
             - secretRef:
                 name: backstage-env-vars
+            - secretRef:
+                name: backstage-oidc-vars
+            - secretRef:
+                name: backstage-postgres-vars
             - secretRef:
                 name: git-credentials
             - secretRef:
@@ -346,6 +350,9 @@ spec:
         - name: backstage-env-vars
           secret:
             secretName: backstage-env-vars
+        - name: backstage-oidc-vars
+          secret:
+            secretName: backstage-oidc-vars
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -384,7 +391,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: backstage-env-vars
+                  name: backstage-postgres-vars
                   key: POSTGRES_PASSWORD
           image: docker.io/library/postgres:17.4-alpine3.21
           name: postgres
@@ -418,7 +425,7 @@ metadata:
   name: backstage-oidc
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "6"
+    argocd.argoproj.io/sync-wave: "15"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   secretStoreRef:
@@ -426,24 +433,15 @@ spec:
     kind: ClusterSecretStore
   refreshInterval: "30s"
   target:
-    name: backstage-env-vars
+    name: backstage-oidc-vars
     creationPolicy: Owner
     deletionPolicy: Retain
     template:
       engineVersion: v2
       mergePolicy: Replace
       data:
-        BACKSTAGE_FRONTEND_URL: https://{{ .Values.ingress_domain_name }}/backstage
-        POSTGRES_HOST: postgresql.backstage.svc.cluster.local
-        POSTGRES_PORT: '5432'
-        POSTGRES_DB: backstage
-        POSTGRES_USER: backstage
-        POSTGRES_PASSWORD: "{{ `{{.POSTGRES_PASSWORD}}` }}"
-        ARGO_WORKFLOWS_URL: https://{{ .Values.ingress_domain_name }}/argo-workflows
-        KEYCLOAK_NAME_METADATA: https://{{ .Values.ingress_domain_name }}/keycloak/realms/platform/.well-known/openid-configuration
         KEYCLOAK_CLIENT_SECRET: "{{ `{{.BACKSTAGE_CLIENT_SECRET}}` }}"
         ARGOCD_AUTH_TOKEN: "argocd.token={{ `{{.ARGOCD_SESSION_TOKEN}}` }}"
-        ARGO_CD_URL: 'https://argocd-server.argocd.svc.cluster.local/api/v1/'
   data:
     - secretKey: ARGOCD_SESSION_TOKEN
       remoteRef:
@@ -453,10 +451,52 @@ spec:
       remoteRef:
         key: keycloak-clients
         property: BACKSTAGE_CLIENT_SECRET
-    - secretKey: POSTGRES_PASSWORD
+---
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: backstage-postgres
+  namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+spec:
+  secretStoreRef:
+    name: aws-secrets-manager
+    kind: ClusterSecretStore
+  refreshInterval: "30s"
+  target:
+    name: backstage-postgres-vars
+    creationPolicy: Owner
+    deletionPolicy: Retain
+    template:
+      engineVersion: v2
+      mergePolicy: Replace
+      data:
+        POSTGRES_PASSWORD: "{{ `{{.password}}` }}"
+  data:
+    - secretKey: password
       remoteRef:
         key: peeks-workshop-gitops-backstage-postgresql-password
         property: password
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: backstage-env-vars
+  namespace: backstage
+  annotations:
+    argocd.argoproj.io/sync-wave: "20"
+type: Opaque
+stringData:
+  BACKSTAGE_FRONTEND_URL: https://{{ .Values.ingress_domain_name }}/backstage
+  POSTGRES_HOST: postgresql.backstage.svc.cluster.local
+  POSTGRES_PORT: '5432'
+  POSTGRES_DB: backstage
+  POSTGRES_USER: backstage
+  ARGO_WORKFLOWS_URL: https://{{ .Values.ingress_domain_name }}/argo-workflows
+  KEYCLOAK_NAME_METADATA: https://{{ .Values.ingress_domain_name }}/keycloak/realms/platform/.well-known/openid-configuration
+  ARGO_CD_URL: 'https://argocd-server.argocd.svc.cluster.local/api/v1/'
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
