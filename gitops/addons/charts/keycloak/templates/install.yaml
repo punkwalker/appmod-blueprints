@@ -41,7 +41,7 @@ spec:
     spec:
       containers:
         - args:
-            - start
+            - start-dev-dev
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
@@ -64,7 +64,7 @@ spec:
           envFrom:
             - secretRef:
                 name: keycloak-config
-          image: quay.io/keycloak/keycloak:26.2.3
+          image: quay.io/keycloak/keycloak:26.3.3
           name: keycloak
           ports:
             - containerPort: 8080
@@ -101,15 +101,11 @@ data:
     hostname-debug=true
     # .../keycloak/realms/platform/hostname-debug
     
-    # Production mode settings
-    cache=ispn
-    cache-stack=kubernetes
+    # Enable account console and admin features
+    features=account,admin
     
-    # Enable account console
-    features=account3
-    
-    # Theme settings
-    theme-cache-enabled=true
+    # Development mode settings for better debugging
+    log-level=INFO
 
 kind: ConfigMap
 metadata:
