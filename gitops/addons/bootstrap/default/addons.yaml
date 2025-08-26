@@ -652,6 +652,10 @@ backstage:
         - /metadata/resourceVersion
         - /metadata/generation
         - /metadata/managedFields
+        # Ignore default values added by ESO to remoteRef
+        - /spec/data/*/remoteRef/conversionStrategy
+        - /spec/data/*/remoteRef/decodingStrategy
+        - /spec/data/*/remoteRef/metadataPolicy
     - group: ""
       kind: Secret
       jsonPointers:

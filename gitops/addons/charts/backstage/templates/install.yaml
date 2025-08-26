@@ -445,11 +445,17 @@ spec:
   data:
     - secretKey: ARGOCD_SESSION_TOKEN
       remoteRef:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: keycloak-clients
+        metadataPolicy: None
         property: ARGOCD_SESSION_TOKEN
     - secretKey: BACKSTAGE_CLIENT_SECRET
       remoteRef:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: keycloak-clients
+        metadataPolicy: None
         property: BACKSTAGE_CLIENT_SECRET
 ---
 apiVersion: external-secrets.io/v1beta1
@@ -477,7 +483,10 @@ spec:
   data:
     - secretKey: password
       remoteRef:
+        conversionStrategy: Default
+        decodingStrategy: None
         key: peeks-workshop-gitops-backstage-postgresql-password
+        metadataPolicy: None
         property: password
 ---
 apiVersion: v1
