@@ -42,7 +42,6 @@ spec:
       containers:
         - args:
             - start
-            - --optimized
           env:
             - name: KC_BOOTSTRAP_ADMIN_USERNAME
               value: "admin"
