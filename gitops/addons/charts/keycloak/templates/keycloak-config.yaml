@@ -277,6 +277,10 @@ spec:
 
               set -ex -o pipefail
 
+              # Set non-interactive mode to avoid prompts during package installation
+              export DEBIAN_FRONTEND=noninteractive
+              export TZ=UTC
+
               apt -qq update && apt -qq install curl jq -y
 
               ADMIN_PASSWORD=$(cat /var/secrets/KC_BOOTSTRAP_ADMIN_PASSWORD)
