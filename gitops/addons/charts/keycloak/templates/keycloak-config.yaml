@@ -304,19 +304,21 @@ spec:
 
               REALM_NAME=platform
               curl --fail-with-body -H "Authorization: bearer ${KEYCLOAK_TOKEN}"  "${KEYCLOAK_URL}/admin/realms/${REALM_NAME}"  &> /dev/null
-              if [ $? -eq 0 ]; then
-                exit 0
-              fi
+              REALM_EXISTS=$?
               set -e
 
-              echo "creating ${REALM_NAME} realm and groups"
+              if [ $REALM_EXISTS -ne 0 ]; then
+                echo "creating ${REALM_NAME} realm and groups"
 
-              jq -r --arg realm ${REALM_NAME}  '.realm = $realm' /var/config/realm-payload.json > /tmp/realm-payload.json
+                jq -r --arg realm ${REALM_NAME}  '.realm = $realm' /var/config/realm-payload.json > /tmp/realm-payload.json
 
-              curl -sS -H "Content-Type: application/json" \
-                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
-                -X POST --data @/tmp/realm-payload.json \
-                ${KEYCLOAK_URL}/admin/realms
+                curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X POST --data @/tmp/realm-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms
+              else
+                echo "Realm ${REALM_NAME} already exists, continuing with client configuration..."
+              fi
 
               curl -sS -H "Content-Type: application/json" \
                 -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
