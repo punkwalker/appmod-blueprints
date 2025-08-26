@@ -4,31 +4,6 @@ kind: Namespace
 metadata:
   name: keycloak
 ---
-# Secret for Backstage PostgreSQL password (used by External Secrets in backstage namespace)
-apiVersion: external-secrets.io/v1beta1
-kind: ExternalSecret
-metadata:
-  name: backstage-postgres-password
-  namespace: keycloak
-  annotations:
-    argocd.argoproj.io/sync-wave: "5"
-spec:
-  secretStoreRef:
-    name: aws-secrets-manager
-    kind: ClusterSecretStore
-  refreshInterval: "30s"
-  target:
-    name: peeks-workshop-gitops-backstage-postgresql-password
-    template:
-      engineVersion: v2
-      data:
-        password: "{{ .password }}"
-  data:
-    - secretKey: password
-      remoteRef:
-        key: peeks-workshop-gitops-backstage-postgresql-password
-        property: password
----
 apiVersion: v1
 kind: Service
 metadata:

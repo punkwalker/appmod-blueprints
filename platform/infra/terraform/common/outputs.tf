@@ -33,3 +33,34 @@ output "backstage_postgresql_secret_arn" {
   description = "ARN of the AWS Secrets Manager secret containing the PostgreSQL password"
   value       = aws_secretsmanager_secret.backstage_postgresql_password.arn
 }
+
+# Keycloak secret outputs
+output "keycloak_admin_password_secret_name" {
+  description = "Name of the AWS Secrets Manager secret containing the Keycloak admin password"
+  value       = aws_secretsmanager_secret.keycloak_admin_password.name
+}
+
+output "keycloak_admin_password_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing the Keycloak admin password"
+  value       = aws_secretsmanager_secret.keycloak_admin_password.arn
+}
+
+output "keycloak_db_password_secret_name" {
+  description = "Name of the AWS Secrets Manager secret containing the Keycloak database password"
+  value       = aws_secretsmanager_secret.keycloak_db_password.name
+}
+
+output "keycloak_db_password_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing the Keycloak database password"
+  value       = aws_secretsmanager_secret.keycloak_db_password.arn
+}
+
+output "keycloak_user_password_secret_name" {
+  description = "Name of the AWS Secrets Manager secret containing the Keycloak user password"
+  value       = aws_secretsmanager_secret.keycloak_user_password.name
+}
+
+output "keycloak_user_password_secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret containing the Keycloak user password"
+  value       = aws_secretsmanager_secret.keycloak_user_password.arn
+}
