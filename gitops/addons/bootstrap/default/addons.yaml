@@ -557,13 +557,6 @@ keycloak:
         - /status
         - /metadata/generation
         - /metadata/managedFields
-        # Ignore default values added by ESO controller
-        - /spec/data/*/remoteRef/conversionStrategy
-        - /spec/data/*/remoteRef/decodingStrategy
-        - /spec/data/*/remoteRef/metadataPolicy
-        - /spec/target/creationPolicy
-        - /spec/target/deletionPolicy
-        - /spec/target/template/mergePolicy
     - group: ""
       kind: Secret
       jsonPointers:
