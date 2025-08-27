@@ -3045,6 +3045,8 @@ kind: ConfigMap
 metadata:
   name: workflow-controller-configmap
   namespace: argo
+  annotations:
+    argocd.argoproj.io/sync-wave: "10"
 data:
   config: |-
     sso:
@@ -3091,6 +3093,8 @@ kind: Deployment
 metadata:
   name: argo-server
   namespace: argo
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
 spec:
   selector:
     matchLabels:
@@ -3149,6 +3153,8 @@ kind: Deployment
 metadata:
   name: workflow-controller
   namespace: argo
+  annotations:
+    argocd.argoproj.io/sync-wave: "15"
 spec:
   selector:
     matchLabels:
