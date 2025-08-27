@@ -17,7 +17,7 @@ spec:
           title: Enter namespace within the EKS cluster to deploy this
           type: string
         aws_region:
-          default: us-west-2
+          default: us-east-1
           title: Region
           type: string
       title: Configuration Options
@@ -35,7 +35,7 @@ spec:
           name: ${{ parameters.name }}
           namespace: ${{ parameters.namespace }}
           aws_region: ${{ parameters.aws_region }}
-          repoUrl: ${{ steps['fetchSystem'].output.entity.spec.hostname }}/gitea
+          repoUrl: d31l55m8hkb7r3.cloudfront.net/user1
       name: Fetch Base
     - id: publish
       name: Publishing to a gitea git repository
@@ -43,7 +43,7 @@ spec:
       input:
         description: CodeBuild create clusters template
         # Hard coded value for this demo purposes only.
-        repoUrl: ${{ steps['fetchSystem'].output.entity.spec.hostname }}/gitea?repo=${{parameters.name}}
+        repoUrl: d31l55m8hkb7r3.cloudfront.net/user1?repo=${{parameters.name}}
         defaultBranch: main
     - id: create-argocd-app
       name: Create ArgoCD App
@@ -54,7 +54,7 @@ spec:
         argoInstance: in-cluster
         projectName: default
         # necessary until we generate our own cert
-        repoUrl: http://my-gitea-http.gitea.svc.cluster.local:3000/giteaAdmin/${{parameters.name}}
+        repoUrl: https://d31l55m8hkb7r3.cloudfront.net/user1/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register
@@ -67,4 +67,3 @@ spec:
       - title: Open in catalog
         icon: catalog
         entityRef: ${{ steps['register'].output.entityRef }}
-
