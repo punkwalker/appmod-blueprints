@@ -8,10 +8,15 @@ spec:
   owner: guest
   type: service
   parameters:
-    - properties:
+    - title: Configuration Options
+      required:
+        - name
+      properties:
         name:
           title: Name of the component
           type: string
+          description: Name for the dev and prod environment
+          ui:autofocus: true
         namespace:
           default: flux-system
           title: Enter namespace within the EKS cluster to deploy this
@@ -32,7 +37,6 @@ spec:
           type: string
           default: platform-on-eks-workshop
           ui:widget: hidden
-      title: Configuration Options
   steps:
     - action: fetch:template
       id: fetch-base
