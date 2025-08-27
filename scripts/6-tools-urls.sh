@@ -83,7 +83,7 @@ echo -e "${BOLD}|${NC} ${GREEN}$(pad_string "Keycloak Admin" $TOOL_COL)${NC}${BO
 echo -e "${BOLD}+----------------+-------------------------------------------------------+-------------------------------------+${NC}"
 echo -e "${BOLD}|${NC} ${GREEN}$(pad_string "Keycloak User" $TOOL_COL)${NC}${BOLD} |${NC} ${YELLOW}$(pad_string "$KEYCLOAK_PLATFORM_SHORT" $URL_COL)${NC}${BOLD} |${NC} $(pad_string "user1,user2 / $USER_PASSWORD" $CRED_COL)${BOLD} |${NC}"
 echo -e "${BOLD}+----------------+-------------------------------------------------------+-------------------------------------+${NC}"
-echo -e "${BOLD}|${NC} ${GREEN}$(pad_string "Gitlab" $TOOL_COL)${NC}${BOLD} |${NC} ${YELLOW}$(pad_string "$GITLAB_URL" $URL_COL)${NC}${BOLD} |${NC} $(pad_string "root / user1" $CRED_COL)${BOLD} |${NC}"
+echo -e "${BOLD}|${NC} ${GREEN}$(pad_string "Gitlab" $TOOL_COL)${NC}${BOLD} |${NC} ${YELLOW}$(pad_string "$GITLAB_URL" $URL_COL)${NC}${BOLD} |${NC} $(pad_string "root / $IDE_PASSWORD (main)" $CRED_COL)${BOLD} |${NC}"
 echo -e "${BOLD}+----------------+-------------------------------------------------------+-------------------------------------+${NC}"
 
 # Print full URLs for easy copy-paste
@@ -99,6 +99,7 @@ print_info "GitLab: ${BOLD}$GITLAB_URL${NC}"
 # Print credentials
 print_header "Credentials"
 print_info "ArgoCD Admin Password: ${BOLD}$IDE_PASSWORD${NC}"
+print_info "GitLab Root Password: ${BOLD}$IDE_PASSWORD${NC} (main password)"
 print_info "Keycloak Admin (admin): ${BOLD}$KEYCLOAK_ADMIN_PASSWORD${NC}"
 print_info "Keycloak Users (user1/user2): ${BOLD}$USER_PASSWORD${NC}"
 
