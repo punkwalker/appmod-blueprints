@@ -48,13 +48,14 @@ spec:
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
       input:
-        description: Create dev and prod clusters template
         repoUrl: ${{ parameters.repoHostUrl }}?repo=${{parameters.name}}&owner=${{ parameters.repoUsername }}
         title: Add new dev and prod environment - ${{parameters.name}}
+        description: Create dev and prod clusters template
+        sourcePath: .
+        targetPath: .
         branchName: add-${{parameters.name}}-env
         removeSourceBranch: true
         commitAction: auto
-        defaultBranch: main
     - id: create-argocd-app
       name: Create ArgoCD App
       action: cnoe:create-argocd-app
