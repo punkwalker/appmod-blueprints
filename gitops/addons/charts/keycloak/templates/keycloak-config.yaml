@@ -626,10 +626,14 @@ spec:
                 "{\"BACKSTAGE_CLIENT_ID\":\"backstage\",\"BACKSTAGE_CLIENT_SECRET\":\"${BACKSTAGE_CLIENT_SECRET}\",\"ARGOCD_SESSION_TOKEN\":\"${ARGOCD_SESSION_TOKEN}\"}"
               
               update_aws_secret \
+                "${PROJECT_PREFIX}-argo-workflows-oidc-credentials" \
+                "{\"ARGO_WORKFLOWS_CLIENT_ID\":\"argo-workflows\",\"ARGO_WORKFLOWS_CLIENT_SECRET\":\"${ARGO_WORKFLOWS_CLIENT_SECRET}\"}"
+              
+              update_aws_secret \
                 "${PROJECT_PREFIX}-argocd-oidc-credentials" \
                 "{\"ARGOCD_CLIENT_ID\":\"argocd\",\"ARGOCD_CLIENT_SECRET\":\"${ARGOCD_CLIENT_SECRET}\",\"ARGOCD_SESSION_TOKEN\":\"${ARGOCD_SESSION_TOKEN}\"}"
 
-              echo "✓ AWS Secrets Manager updated with real ArgoCD session token"
+              echo "✓ AWS Secrets Manager updated with all OIDC client secrets and ArgoCD session token"
 
               # Update ArgoCD oidc client secret
               ./kubectl -n argocd patch secret argocd-secret --patch='{"stringData": { "oidc.keycloak.clientSecret": "'"${ARGOCD_CLIENT_SECRET}"'" }}'
