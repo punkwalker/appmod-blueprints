@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+#DEBUG=1 $BASE_DIR/platform/infra/terraform/hub/destroy.sh
+
 set -euo pipefail
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"

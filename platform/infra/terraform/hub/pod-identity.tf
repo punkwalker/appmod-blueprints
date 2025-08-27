@@ -438,6 +438,14 @@ locals {
             "eks:DescribeAddon",
             "eks:ListAddons",
             "eks:UpdateAddon",
+            "eks:CreateAccessEntry",
+            "eks:DeleteAccessEntry",
+            "eks:DescribeAccessEntry",
+            "eks:ListAccessEntries",
+            "eks:UpdateAccessEntry",
+            "eks:AssociateAccessPolicy",
+            "eks:DisassociateAccessPolicy",
+            "eks:ListAssociatedAccessPolicies",
             "iam:PassRole"
           ]
           Resource = "*"
