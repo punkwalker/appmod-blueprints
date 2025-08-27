@@ -11,11 +11,13 @@
 #
 # USAGE:
 #   ./gitlab-create-repo.sh <repo-name> [template-type]
+#   ./gitlab-create-repo.sh --all
 #
 # EXAMPLES:
 #   ./gitlab-create-repo.sh my-new-repo
 #   ./gitlab-create-repo.sh terraform-eks terraform
 #   ./gitlab-create-repo.sh my-app application
+#   ./gitlab-create-repo.sh --all                    # Create all standard repos
 #
 # PREREQUISITES:
 #   - GitLab must be accessible
@@ -238,6 +240,52 @@ create_repo_content_terraform() {
     rm -rf "$temp_dir"
 }
 
+# Create repository content for platform
+create_repo_content_platform() {
+    local repo_name=$1
+    print_step "Creating initial repo content for platform $repo_name..."
+    
+    export REPO_ROOT=$(git rev-parse --show-toplevel)
+    local temp_dir="${REPO_ROOT}/temp-gitlab"
+    
+    # Clean up any existing temp directory
+    rm -rf "$temp_dir"
+    mkdir -p "$temp_dir"
+    
+    # Clone the new repository
+    git clone "$GITLAB_URL/$GIT_USERNAME/$repo_name.git" "$temp_dir/$repo_name"
+    
+    pushd "$temp_dir/$repo_name" > /dev/null
+    
+    # Configure git
+    git config user.email "participants@workshops.aws"
+    git config user.name "Workshop Participant"
+    
+    # Copy platform content
+    if [ -d "${REPO_ROOT}/deployment/addons/kubevela" ]; then
+        cp -r "${REPO_ROOT}/deployment/addons/kubevela" .
+        cp -r "${REPO_ROOT}/platform/backstage" .
+        
+        # Replace hostname in backstage catalog file if it exists
+        if [ -f "./backstage/templates/catalog-info.yaml" ]; then
+            local domain_name=$(echo "$GITLAB_URL" | sed 's|https://||')
+            sed -i "s/HOSTNAME/${domain_name}/g" "./backstage/templates/catalog-info.yaml"
+        fi
+        
+        git add .
+        git commit -m "Add initial platform content"
+        git push origin main
+        print_success "Initial platform content pushed to $repo_name"
+    else
+        print_warning "No platform content found"
+    fi
+    
+    popd > /dev/null
+    
+    # Clean up
+    rm -rf "$temp_dir"
+}
+
 # Main function to check and create repository
 check_and_create_repo() {
     local repo_name=$1
@@ -258,6 +306,9 @@ check_and_create_repo() {
         "terraform")
             create_repo_content_terraform "$repo_name"
             ;;
+        "platform")
+            create_repo_content_platform "$repo_name"
+            ;;
         "")
             print_info "No template type specified, repository created empty."
             ;;
@@ -267,18 +318,72 @@ check_and_create_repo() {
     esac
 }
 
+# Function to create all standard repositories (like giteaInit.sh does)
+create_all_standard_repos() {
+    print_header "Creating All Standard Repositories"
+    print_info "This will create the same repositories as the original giteaInit.sh script"
+    
+    # Application repositories
+    print_step "Creating application repositories"
+    print_info "These repositories will contain sample application code"
+    
+    check_and_create_repo "dotnet" "application"
+    check_and_create_repo "golang" "application"
+    check_and_create_repo "java" "application"
+    check_and_create_repo "rust" "application"
+    check_and_create_repo "next-js" "application"
+    
+    # Infrastructure repositories
+    print_step "Creating infrastructure repositories"
+    print_info "These repositories will contain terraform and platform code"
+    
+    check_and_create_repo "terraform-eks" "terraform"
+    check_and_create_repo "platform" "platform"
+    
+    print_success "All standard repositories have been created in GitLab!"
+    
+    print_info "Created repositories:"
+    echo "  ✓ Application repos: dotnet, golang, java, rust, next-js"
+    echo "  ✓ Infrastructure repos: terraform-eks, platform"
+    
+    print_info "You can view them at: $GITLAB_URL/$GIT_USERNAME"
+}
+
+# Show usage information
+show_usage() {
+    echo "Usage: $0 <repo-name> [template-type]"
+    echo "       $0 --all"
+    echo ""
+    echo "Create individual repository:"
+    echo "  $0 my-new-repo                    # Create empty repository"
+    echo "  $0 terraform-eks terraform       # Create with terraform content"
+    echo "  $0 my-app application            # Create with application content"
+    echo "  $0 platform-repo platform        # Create with platform content"
+    echo ""
+    echo "Create all standard repositories:"
+    echo "  $0 --all                          # Create all standard repos (like giteaInit.sh)"
+    echo ""
+    echo "Template types: application, terraform, platform"
+}
+
 # Main execution
 main() {
     local repo_name=$1
     local template_type=$2
     
+    # Handle --all flag
+    if [ "$repo_name" = "--all" ]; then
+        wait_for_gitlab
+        get_gitlab_token
+        create_all_standard_repos
+        return 0
+    fi
+    
+    # Handle individual repository creation
     if [ -z "$repo_name" ]; then
-        print_error "Usage: $0 <repo-name> [template-type]"
-        print_info "Template types: application, terraform"
-        print_info "Examples:"
-        print_info "  $0 my-new-repo"
-        print_info "  $0 terraform-eks terraform"
-        print_info "  $0 my-app application"
+        print_error "Repository name is required"
+        echo ""
+        show_usage
         exit 1
     fi
     
