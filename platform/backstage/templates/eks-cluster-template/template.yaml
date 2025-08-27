@@ -43,12 +43,12 @@ spec:
           title: Account ID
           type: string
           description: AWS Account ID
-          default: "665742499430"
+          default: "123456789012"
         managementAccountId:
           title: Management Account ID
           type: string
           description: AWS Management Account ID
-          default: "665742499430"
+          default: "123456789012"
         tenant:
           title: Tenant Name
           type: string
@@ -56,7 +56,7 @@ spec:
           default: "tenant1"
         repoHostUrl:
           type: string
-          default: d31l55m8hkb7r3.cloudfront.net
+          default: gitlab.example.com
           ui:widget: hidden
         repoUsername:
           type: string
@@ -68,7 +68,7 @@ spec:
           ui:widget: hidden
         ingressDomainName:
           type: string
-          default: d35j5kjjdl7nh.cloudfront.net
+          default: ingress.example.com
           ui:widget: hidden
     - title: Git Repository URLs
       properties:
@@ -76,22 +76,22 @@ spec:
           title: Addons Repository URL
           type: string
           description: Git repository URL for addons
-          default: "https://d31l55m8hkb7r3.cloudfront.net/user1/platform-on-eks-workshop.git"
+          default: "https://gitlab.example.com/user1/platform-on-eks-workshop.git"
         fleetRepoUrl:
           title: Fleet Repository URL
           type: string
           description: Git repository URL for fleet
-          default: "https://d31l55m8hkb7r3.cloudfront.net/user1/platform-on-eks-workshop.git"
+          default: "https://gitlab.example.com/user1/platform-on-eks-workshop.git"
         platformRepoUrl:
           title: Platform Repository URL
           type: string
           description: Git repository URL for platform
-          default: "https://d31l55m8hkb7r3.cloudfront.net/user1/platform-on-eks-workshop.git"
+          default: "https://gitlab.example.com/user1/platform-on-eks-workshop.git"
         workloadRepoUrl:
           title: Workload Repository URL
           type: string
           description: Git repository URL for workload
-          default: "https://d31l55m8hkb7r3.cloudfront.net/user1/platform-on-eks-workshop.git"
+          default: "https://gitlab.example.com/user1/platform-on-eks-workshop.git"
     - title: Cluster Addons Configuration
       properties:
         enableIngressClassAlb:
@@ -160,19 +160,19 @@ spec:
       name: Add new Clusters
       action: roadiehq:utils:fs:append
       input:
-        path: ./repo/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+        path: ./repo/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
         content: "\n  ${{ parameters.clusterName }}: \"${{ parameters.accountId }}\""
     - id: addKroClusterConfig
       name: Update KRO Clusters Configuration
       action: roadiehq:utils:fs:append
       input:
-        path: ./repo/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+        path: ./repo/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
         content: "\n  ${{ parameters.clusterName }}:\n    managementAccountId: \"${{ parameters.managementAccountId }}\"\n    accountId: \"${{ parameters.accountId }}\"\n    tenant: \"${{ parameters.tenant }}\"\n    environment: \"${{ parameters.environment }}\"\n    region: \"${{ parameters.region }}\"\n    k8sVersion: \"${{ parameters.k8sVersion }}\"\n    gitops:\n      addonsRepoUrl: \"${{ parameters.addonsRepoUrl }}\"\n      fleetRepoUrl: \"${{ parameters.fleetRepoUrl }}\"\n      platformRepoUrl: \"${{ parameters.platformRepoUrl }}\"\n      workloadRepoUrl: \"${{ parameters.workloadRepoUrl }}\"\n    addons:\n      enable_ingress_class_alb: \"${{ parameters.enableIngressClassAlb }}\"\n      enable_argo_rollouts: \"${{ parameters.enableArgoRollouts }}\"\n      enable_metrics_server: \"${{ parameters.enableMetricsServer }}\"\n      enable_external_secrets: \"${{ parameters.enableExternalSecrets }}\"\n      enable_kyverno: \"${{ parameters.enableKyverno }}\"\n      enable_kyverno_policies: \"${{ parameters.enableKyvernoPolicies }}\"\n      enable_kyverno_policy_reporter: \"${{ parameters.enableKyvernoPolicyReporter }}\"\n      enable_ack_iam: \"${{ parameters.enableAckIam }}\"\n      enable_ack_eks: \"${{ parameters.enableAckEks }}\"\n      enable_ack_efs: \"${{ parameters.enableAckEfs }}\"\n      enable_aws_efs_csi_driver: \"${{ parameters.enableAwsEfsCsiDriver }}\""
     - id: addComponent
       name: Add new component for Cluster
       action: roadiehq:utils:fs:write
       input:
-        path: ./repo/backstage-templates/components/${{ parameters.clusterName }}.yaml
+        path: ./repo/platform/backstage/components/${{ parameters.clusterName }}.yaml
         content: |
           apiVersion: backstage.io/v1alpha1
           kind: Component
@@ -194,7 +194,7 @@ spec:
     #   name: Update Clusters Configuration
     #   action: roadiehq:utils:merge
     #   input:
-    #     path: ./repo/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+    #     path: ./repo/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
     #     content:
     #       clusters:
     #         '${{ parameters.clusterName }}': '${{ parameters.accountId }}'
@@ -203,7 +203,7 @@ spec:
     #   name: read file
     #   action: roadiehq:utils:fs:parse
     #   input:
-    #     path: ./repo/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+    #     path: ./repo/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
     # - id: log
     #   name: Console.log
     #   action: debug:log
@@ -226,7 +226,7 @@ spec:
       name: Register
       action: catalog:register
       input:
-        catalogInfoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}/${{ parameters.repoName }}/-/blob/main/backstage-templates/components/${{ parameters.clusterName }}.yaml
+        catalogInfoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}/${{ parameters.repoName }}/-/blob/main/platform/backstage/components/${{ parameters.clusterName }}.yaml
         optional: true
   output:
     links:

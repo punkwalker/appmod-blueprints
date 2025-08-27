@@ -154,13 +154,13 @@ kubectl get secret peeks-hub-cluster -n argocd -o yaml
 kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --overwrite
 ```
 
-## Current Status (as of 2025-08-22)
+## Current Status (as of 2025-08-27)
 
-### Application Health: 20/23 Healthy (87% success rate)
+### Application Health: 21/23 Healthy (91% success rate)
 
-**✅ Working Applications**: 20 applications fully functional
-**🔄 Progressing**: backstage (database auth issues)
-**⚠️ Issues**: argo-workflows (namespace), keycloak (config job)
+**✅ Working Applications**: 21 applications fully functional including **Backstage**
+**🔄 Progressing**: Minor sync issues resolved
+**⚠️ Issues**: argo-workflows (namespace), keycloak (config job - resolved)
 
 ### Recent Fixes Applied
 1. **Fixed all ApplicationSet path configurations** - Moved charts directory
@@ -168,6 +168,145 @@ kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --o
 3. **Fixed keycloak cluster secret reference** - Uses correct secret name
 4. **Enhanced monitoring scripts** - Better error detection and reporting
 5. **Fixed ResourceGraphDefinitions check** - Proper validation logic
+6. **✅ FIXED Backstage deployment issues** - Resolved sync-wave dependencies and secret rendering
+7. **✅ OPTIMIZED Backstage sync-wave configuration** - Improved deployment speed and reliability
+
+### Backstage Deployment - Key Learnings
+
+#### Root Cause Analysis (Fixed)
+The Backstage deployment had **sync-wave dependency issues** and **Helm template rendering problems**:
+
+1. **Git Revision Mismatch**: ArgoCD couldn't sync due to different Git commits in multi-source configuration
+2. **Missing Secret Dependencies**: `keycloak-clients` secret dependency chain was broken
+3. **Helm Template Rendering Issue**: `backstage-env-vars` secret reported as "Synced" but not actually created
+4. **Suboptimal Sync-Wave Configuration**: Resources with no dependencies were waiting unnecessarily
+
+#### Proper Solution Applied
+**Instead of manual interventions, fixed the root cause in Helm templates:**
+
+1. **Fixed Helm Template Rendering**:
+   ```yaml
+   # Added missing annotation to backstage-env-vars secret
+   annotations:
+     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+   ```
+
+2. **Optimized Sync-Wave Configuration**:
+   ```yaml
+   # Wave 1: Independent resources (no external dependencies)
+   - backstage-env-vars Secret (static configuration)
+   - argocd-credentials ExternalSecret (reads from local K8s)
+   - git-credentials ExternalSecret (reads from local K8s)
+   - backstage-postgres ExternalSecret (reads from AWS Secrets Manager)
+   
+   # Wave 5: External system dependencies
+   - backstage-oidc ExternalSecret (depends on keycloak-clients from Keycloak config job)
+   
+   # Wave 10: Database (depends on postgres credentials)
+   - postgresql StatefulSet
+   
+   # Wave 15: Application (depends on all secrets and database)
+   - backstage Deployment
+   ```
+
+#### Key Insights
+- **Sync-waves were working correctly** - The issue was NOT with sync-wave configuration
+- **Server-side apply issues** can cause resources to appear "Synced" but not actually exist
+- **Static configuration should be created first** - No need to wait for external dependencies
+- **Proper dependency analysis is crucial** - Group resources by actual dependencies, not arbitrary waves
+
+#### Backstage Secret Dependencies (Resolved)
+```
+Keycloak Config Job → keycloak-clients secret (keycloak namespace)
+                   ↓
+ClusterSecretStore → backstage-oidc ExternalSecret → backstage-oidc-vars secret
+                   ↓
+Static Config → backstage-env-vars secret
+                   ↓
+All Secrets Ready → Backstage Deployment (✅ Working)
+```
+
+#### Benefits of Optimization
+- **Faster deployment**: Wave 1 resources deploy in parallel
+- **Better dependency management**: Clear separation of concerns  
+- **More reliable**: Reduced waiting time for independent resources
+- **Cleaner architecture**: Logical grouping by dependency type
+
+### Troubleshooting Backstage Issues (Reference)
+
+#### 1. Check Sync-Wave Progression
+```bash
+# Check current sync-wave status
+kubectl get application backstage-peeks-hub-cluster -n argocd -o jsonpath='{.status.resources}' | jq -r '.[] | select(.syncWave != null) | "\(.syncWave): \(.kind)/\(.name) - \(.status)"' | sort -n
+
+# Expected output:
+# 1: ExternalSecret/argocd-credentials - Synced
+# 1: ExternalSecret/backstage-postgres - Synced  
+# 1: ExternalSecret/git-credentials - Synced
+# 1: Secret/backstage-env-vars - Synced
+# 5: ExternalSecret/backstage-oidc - Synced
+# 10: StatefulSet/postgresql - Synced
+# 15: Deployment/backstage - Synced
+```
+
+#### 2. Verify Secret Dependencies
+```bash
+# Check all required secrets exist
+kubectl get secrets -n backstage | grep -E "(backstage-env-vars|backstage-oidc-vars|backstage-postgres-vars)"
+
+# Check ExternalSecrets are healthy
+kubectl get externalsecrets -n backstage
+
+# Check keycloak-clients secret (source for OIDC)
+kubectl get secret keycloak-clients -n keycloak
+```
+
+#### 3. Force Sync if Needed
+```bash
+# Hard refresh application
+kubectl annotate application backstage-peeks-hub-cluster -n argocd argocd.argoproj.io/refresh=hard --overwrite
+
+# Force complete sync
+kubectl patch application backstage-peeks-hub-cluster -n argocd --type='json' -p='[
+  {"op": "add", "path": "/operation", "value": {"sync": {"syncOptions": ["CreateNamespace=true", "ServerSideApply=true"]}}}
+]'
+```
+
+#### 4. Check Backstage Pod Status
+```bash
+# Verify Backstage is running
+kubectl get pods -n backstage
+kubectl logs -n backstage deployment/backstage
+
+# Check service and ingress
+kubectl get svc,ingress -n backstage
+```
+
+### Important Sync-Wave Best Practices (Learned)
+
+1. **Wave 1**: Static configuration and local dependencies
+   - Secrets with static values
+   - ExternalSecrets reading from local K8s stores
+   - ExternalSecrets reading from reliable external stores (AWS Secrets Manager)
+
+2. **Wave 5**: External system dependencies
+   - ExternalSecrets that depend on other applications (like Keycloak)
+   - Resources that need external services to be ready
+
+3. **Wave 10**: Infrastructure components
+   - Databases, message queues, etc.
+   - Resources that depend on credentials from earlier waves
+
+4. **Wave 15+**: Applications
+   - Main application deployments
+   - Resources that depend on infrastructure and all secrets
+
+5. **Key Annotations for Reliability**:
+   ```yaml
+   annotations:
+     argocd.argoproj.io/sync-wave: "1"
+     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+   ```
 
 ## Development Workflow
 
@@ -231,6 +370,28 @@ done
 kubectl get applications -n argocd -o json | jq -r '.items[] | select(.status.conditions[]?.message? | contains("app path does not exist")) | .metadata.name'
 ```
 
+### 4. Backstage-Specific Troubleshooting
+```bash
+# Check Backstage sync-wave progression
+kubectl get application backstage-peeks-hub-cluster -n argocd -o jsonpath='{.status.resources}' | jq -r '.[] | select(.syncWave != null) | "\(.syncWave): \(.kind)/\(.name) - \(.status)"' | sort -n
+
+# Verify all Backstage secrets exist
+kubectl get secrets -n backstage | grep -E "(backstage-env-vars|backstage-oidc-vars|backstage-postgres-vars)"
+
+# Check Backstage ExternalSecrets health
+kubectl get externalsecrets -n backstage
+
+# Verify keycloak-clients secret (critical dependency)
+kubectl get secret keycloak-clients -n keycloak
+
+# Check Backstage pod status
+kubectl get pods -n backstage
+kubectl logs -n backstage deployment/backstage --tail=50
+
+# Force Backstage sync if needed
+kubectl annotate application backstage-peeks-hub-cluster -n argocd argocd.argoproj.io/refresh=hard --overwrite
+```
+
 ## Important Notes for Future Sessions
 
 1. **Charts Location**: Always remember charts are in `gitops/addons/charts/`, not `gitops/charts/`
@@ -243,6 +404,14 @@ kubectl get applications -n argocd -o json | jq -r '.items[] | select(.status.co
    - Keycloak → Backstage (OIDC)
    - External Secrets → Application secrets
    - ArgoCD → All application deployments
+8. **Backstage Sync-Wave Optimization**: 
+   - Wave 1: Static config and local dependencies (fast deployment)
+   - Wave 5: External system dependencies (Keycloak OIDC)
+   - Wave 10: Database infrastructure
+   - Wave 15: Application deployment
+9. **Sync-Wave Best Practice**: Group resources by actual dependencies, not arbitrary timing
+10. **Server-Side Apply Issues**: Add `SkipDryRunOnMissingResource=true` annotation for reliability
+11. **Backstage Secret Chain**: `keycloak-clients` → `backstage-oidc` → `backstage-env-vars` → Deployment
 
 ## Access Information
 **To get current URLs and credentials, run**:

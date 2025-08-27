@@ -72,8 +72,8 @@ while true; do
     
     print_step "Restarting kro deployment in kro-system namespace..."
     kubectl rollout restart deployment -n kro-system kro
-    print_info "Waiting 60 seconds for KRO to process ResourceGraphDefinitions..."
-    sleep 60
+    print_info "Waiting 30 seconds for KRO to process ResourceGraphDefinitions..."
+    sleep 30
   fi
 done
 
