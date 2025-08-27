@@ -187,6 +187,7 @@ kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --o
 6. **✅ FIXED Backstage deployment issues** - Resolved sync-wave dependencies and secret rendering
 7. **✅ OPTIMIZED Backstage sync-wave configuration** - Improved deployment speed and reliability
 8. **✅ FIXED Backstage template path references** - Resolved ENOENT errors in template deployment
+9. **✅ FIXED Argo Workflows sync-wave dependencies** - Added proper sync-wave annotations and external secret configuration
 
 ### Backstage Deployment - Key Learnings
 
@@ -283,11 +284,62 @@ ENOENT: no such file or directory, open '/tmp/.../repo/addons/tenants/tenant1/de
 
 4. **Removed Duplicate Template**: Deleted incorrect `platform/backstage/eks-cluster-template/` (root level)
 
+### Argo Workflows Sync-Wave Issues (Fixed)
+
+#### Root Cause Analysis
+The Argo Workflows application had **missing sync-wave annotations** that could cause deployment race conditions:
+
+**Issues Found**:
+1. **No sync-wave annotations**: ExternalSecret, ConfigMap, and Deployments had no deployment order
+2. **Missing external secret fields**: No `refreshInterval` or `SkipDryRunOnMissingResource` annotation
+3. **Potential race conditions**: Deployments could start before secrets were ready
+
+#### Proper Solution Applied
+
+1. **Added Sync-Wave Annotations**:
+   ```yaml
+   # Wave 5: External dependencies (Keycloak OIDC)
+   apiVersion: external-secrets.io/v1beta1
+   kind: ExternalSecret
+   metadata:
+     annotations:
+       argocd.argoproj.io/sync-wave: "5"
+       argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+   
+   # Wave 10: Configuration that depends on secrets
+   apiVersion: v1
+   kind: ConfigMap
+   metadata:
+     annotations:
+       argocd.argoproj.io/sync-wave: "10"
+   
+   # Wave 15: Application deployments
+   apiVersion: apps/v1
+   kind: Deployment
+   metadata:
+     annotations:
+       argocd.argoproj.io/sync-wave: "15"
+   ```
+
+2. **Enhanced ExternalSecret Configuration**:
+   ```yaml
+   spec:
+     refreshInterval: "1h"  # Added for consistency
+     secretStoreRef:
+       name: keycloak
+       kind: ClusterSecretStore
+   ```
+
+3. **Verified Deployment Order**:
+   - ✅ Wave 5: `keycloak-oidc` ExternalSecret created first
+   - ✅ Wave 10: `workflow-controller-configmap` created after secret
+   - ✅ Wave 15: `argo-server` and `workflow-controller` Deployments created last
+
 #### Key Insights
-- **Backstage templates must use correct repository paths** - Include full path from repo root
-- **Templates should have placeholder values** - Not environment-specific configurations
-- **Component directory separation** - `platform/components/` (CUE files) vs `platform/backstage/components/` (Backstage catalog)
-- **Template location matters** - Must be in `templates/` subdirectory for proper discovery
+- **Sync-waves prevent race conditions** - Ensure secrets exist before applications that need them
+- **ExternalSecrets need proper annotations** - `SkipDryRunOnMissingResource=true` for reliability
+- **ConfigMaps with secret references** should be in later waves than the secrets they depend on
+- **Deployment order matters** - Applications should be deployed after their dependencies are ready
 
 #### Backstage Secret Dependencies (Resolved)
 ```
@@ -508,6 +560,34 @@ find /home/ec2-user/environment/platform-on-eks-workshop -name "kro-clusters" -t
 kubectl logs -n backstage deployment/backstage --tail=100 | grep -i error
 ```
 
+### 6. Argo Workflows Troubleshooting
+```bash
+# Check Argo Workflows application status
+kubectl get application argo-workflows-peeks-hub-cluster -n argocd
+
+# Check Argo Workflows pods
+kubectl get pods -n argo
+
+# Check keycloak-oidc secret in argo namespace
+kubectl get secret keycloak-oidc -n argo
+kubectl get externalsecret keycloak-oidc -n argo
+
+# Check workflow-controller-configmap for OIDC configuration
+kubectl get configmap workflow-controller-configmap -n argo -o yaml | grep -A10 -B5 "keycloak-oidc"
+
+# Check Argo Workflows logs
+kubectl logs -n argo deployment/argo-server --tail=50
+kubectl logs -n argo deployment/workflow-controller --tail=50
+
+# Force sync if needed
+argocd app sync argo-workflows-peeks-hub-cluster --force
+
+# Check sync-wave annotations
+kubectl get externalsecret keycloak-oidc -n argo -o jsonpath='{.metadata.annotations}'
+kubectl get configmap workflow-controller-configmap -n argo -o jsonpath='{.metadata.annotations}'
+kubectl get deployment argo-server -n argo -o jsonpath='{.metadata.annotations}'
+```
+
 ## Important Notes for Future Sessions
 
 1. **Charts Location**: Always remember charts are in `gitops/addons/charts/`, not `gitops/charts/`
@@ -534,6 +614,12 @@ kubectl logs -n backstage deployment/backstage --tail=100 | grep -i error
     - Components: `platform/backstage/components/` (catalog components)
     - Platform Components: `platform/components/` (CUE files - different purpose)
 14. **Template Values**: Use placeholder values, not environment-specific configurations
+15. **Argo Workflows Sync-Waves**: 
+    - Wave 5: keycloak-oidc ExternalSecret (depends on Keycloak)
+    - Wave 10: workflow-controller-configmap (depends on secret)
+    - Wave 15: argo-server and workflow-controller Deployments
+16. **ExternalSecret Best Practices**: Always include `SkipDryRunOnMissingResource=true` and `refreshInterval`
+17. **Sync-Wave Dependencies**: ConfigMaps with secret references should be in later waves than the secrets
 
 ## Access Information
 **To get current URLs and credentials, run**:
