@@ -18,11 +18,27 @@ platform-on-eks-workshop/
 │   │   └── ...                       # Other application charts
 │   │   ├── bootstrap/default/        # Bootstrap addon configurations
 │   │   ├── environments/             # Environment-specific configs
-│   │   └── tenants/                  # Tenant-specific configs
+│   │   ├── tenants/                  # Tenant-specific configs
+│   │   │   └── tenant1/default/addons/multi-acct/values.yaml  # Multi-account cluster configs
+│   │   └── ...
 │   ├── fleet/                        # Fleet management
-│   │   └── bootstrap/                # Bootstrap ApplicationSets
+│   │   ├── bootstrap/                # Bootstrap ApplicationSets
+│   │   └── kro-values/tenants/tenant1/kro-clusters/values.yaml  # KRO cluster configurations
 │   └── workloads/                    # Application workloads (created during fixes)
 ├── platform/                        # Platform infrastructure
+│   ├── backstage/                    # Backstage templates and components
+│   │   ├── templates/                # Backstage software templates
+│   │   │   ├── eks-cluster-template/ # EKS cluster creation template (FIXED)
+│   │   │   ├── app-deploy/           # Application deployment templates
+│   │   │   ├── cicd-pipeline/        # CI/CD pipeline templates
+│   │   │   └── ...                   # Other software templates
+│   │   ├── components/               # Backstage catalog components (CREATED)
+│   │   └── README.md                 # Backstage template documentation
+│   ├── components/                   # Platform CUE components (different from Backstage)
+│   │   ├── appmod-service.cue        # Application modernization service
+│   │   ├── ddb-table.cue             # DynamoDB table component
+│   │   └── ...                       # Other CUE components
+│   └── ...
 ├── scripts/                         # Utility scripts
 │   ├── wait-for-applicationsets.sh  # Enhanced monitoring script
 │   ├── 2-bootstrap-accounts.sh      # Fixed ResourceGraphDefinitions check
@@ -170,6 +186,7 @@ kubectl annotate externalsecret <name> -n <namespace> force-sync=$(date +%s) --o
 5. **Fixed ResourceGraphDefinitions check** - Proper validation logic
 6. **✅ FIXED Backstage deployment issues** - Resolved sync-wave dependencies and secret rendering
 7. **✅ OPTIMIZED Backstage sync-wave configuration** - Improved deployment speed and reliability
+8. **✅ FIXED Backstage template path references** - Resolved ENOENT errors in template deployment
 
 ### Backstage Deployment - Key Learnings
 
@@ -209,11 +226,68 @@ The Backstage deployment had **sync-wave dependency issues** and **Helm template
    - backstage Deployment
    ```
 
+### Backstage Template Issues (Fixed)
+
+#### Root Cause Analysis
+The Backstage software templates had **incorrect path references** that caused ENOENT (file not found) errors when users tried to deploy templates:
+
+**Original Error**:
+```
+ENOENT: no such file or directory, open '/tmp/.../repo/addons/tenants/tenant1/default/addons/multi-acct/values.yaml'
+```
+
+**Issues Found**:
+1. **Missing gitops/ prefix**: Templates referenced `./repo/addons/...` instead of `./repo/gitops/addons/...`
+2. **Duplicate template location**: `eks-cluster-template` existed in both correct (`templates/`) and incorrect (root) locations
+3. **Environment-specific values**: Template had actual environment values instead of placeholders
+4. **Incorrect component directory**: Referenced non-existent `backstage-templates/components/`
+
+#### Proper Solution Applied
+
+1. **Fixed Path References**:
+   ```yaml
+   # Before (BROKEN)
+   path: ./repo/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+   path: ./repo/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+   path: ./repo/backstage-templates/components/${{ parameters.clusterName }}.yaml
+   
+   # After (FIXED)
+   path: ./repo/gitops/addons/tenants/tenant1/default/addons/multi-acct/values.yaml
+   path: ./repo/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/values.yaml
+   path: ./repo/platform/backstage/components/${{ parameters.clusterName }}.yaml
+   ```
+
+2. **Restored Template Placeholder Values**:
+   ```yaml
+   # Before (environment-specific)
+   default: "665742499430"
+   default: d31l55m8hkb7r3.cloudfront.net
+   default: "https://d31l55m8hkb7r3.cloudfront.net/user1/platform-on-eks-workshop.git"
+   
+   # After (proper placeholders)
+   default: "123456789012"
+   default: gitlab.example.com
+   default: "https://gitlab.example.com/user1/platform-on-eks-workshop.git"
+   ```
+
+3. **Created Proper Directory Structure**:
+   ```
+   platform/backstage/
+   ├── templates/                    # Software templates (existing)
+   │   ├── eks-cluster-template/     # EKS cluster creation (fixed)
+   │   ├── app-deploy/              # Application deployment
+   │   └── ...                      # Other templates
+   ├── components/                   # Backstage catalog components (CREATED)
+   └── README.md
+   ```
+
+4. **Removed Duplicate Template**: Deleted incorrect `platform/backstage/eks-cluster-template/` (root level)
+
 #### Key Insights
-- **Sync-waves were working correctly** - The issue was NOT with sync-wave configuration
-- **Server-side apply issues** can cause resources to appear "Synced" but not actually exist
-- **Static configuration should be created first** - No need to wait for external dependencies
-- **Proper dependency analysis is crucial** - Group resources by actual dependencies, not arbitrary waves
+- **Backstage templates must use correct repository paths** - Include full path from repo root
+- **Templates should have placeholder values** - Not environment-specific configurations
+- **Component directory separation** - `platform/components/` (CUE files) vs `platform/backstage/components/` (Backstage catalog)
+- **Template location matters** - Must be in `templates/` subdirectory for proper discovery
 
 #### Backstage Secret Dependencies (Resolved)
 ```
@@ -370,7 +444,27 @@ done
 kubectl get applications -n argocd -o json | jq -r '.items[] | select(.status.conditions[]?.message? | contains("app path does not exist")) | .metadata.name'
 ```
 
-### 4. Backstage-Specific Troubleshooting
+### 5. Backstage Template Troubleshooting
+```bash
+# Check Backstage template structure
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/
+
+# Verify template path references are correct
+grep -n "path.*repo/" /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/*/template.yaml
+
+# Check if required directories exist
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/gitops/addons/tenants/tenant1/default/addons/multi-acct/
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/components/
+
+# Test template path resolution (if template fails)
+# Check if the paths referenced in templates actually exist:
+find /home/ec2-user/environment/platform-on-eks-workshop -name "multi-acct" -type d
+find /home/ec2-user/environment/platform-on-eks-workshop -name "kro-clusters" -type d
+
+# Check Backstage logs for template errors
+kubectl logs -n backstage deployment/backstage --tail=100 | grep -i error
+```
 ```bash
 # Check Backstage sync-wave progression
 kubectl get application backstage-peeks-hub-cluster -n argocd -o jsonpath='{.status.resources}' | jq -r '.[] | select(.syncWave != null) | "\(.syncWave): \(.kind)/\(.name) - \(.status)"' | sort -n
@@ -390,6 +484,28 @@ kubectl logs -n backstage deployment/backstage --tail=50
 
 # Force Backstage sync if needed
 kubectl annotate application backstage-peeks-hub-cluster -n argocd argocd.argoproj.io/refresh=hard --overwrite
+```
+
+### 5. Backstage Template Troubleshooting
+```bash
+# Check Backstage template structure
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/
+
+# Verify template path references are correct
+grep -n "path.*repo/" /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/templates/*/template.yaml
+
+# Check if required directories exist
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/gitops/addons/tenants/tenant1/default/addons/multi-acct/
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/gitops/fleet/kro-values/tenants/tenant1/kro-clusters/
+ls -la /home/ec2-user/environment/platform-on-eks-workshop/platform/backstage/components/
+
+# Test template path resolution (if template fails)
+# Check if the paths referenced in templates actually exist:
+find /home/ec2-user/environment/platform-on-eks-workshop -name "multi-acct" -type d
+find /home/ec2-user/environment/platform-on-eks-workshop -name "kro-clusters" -type d
+
+# Check Backstage logs for template errors
+kubectl logs -n backstage deployment/backstage --tail=100 | grep -i error
 ```
 
 ## Important Notes for Future Sessions
@@ -412,6 +528,12 @@ kubectl annotate application backstage-peeks-hub-cluster -n argocd argocd.argopr
 9. **Sync-Wave Best Practice**: Group resources by actual dependencies, not arbitrary timing
 10. **Server-Side Apply Issues**: Add `SkipDryRunOnMissingResource=true` annotation for reliability
 11. **Backstage Secret Chain**: `keycloak-clients` → `backstage-oidc` → `backstage-env-vars` → Deployment
+12. **Backstage Template Paths**: Always use full paths from repo root with `gitops/` prefix
+13. **Template Structure**: 
+    - Templates: `platform/backstage/templates/` (software templates)
+    - Components: `platform/backstage/components/` (catalog components)
+    - Platform Components: `platform/components/` (CUE files - different purpose)
+14. **Template Values**: Use placeholder values, not environment-specific configurations
 
 ## Access Information
 **To get current URLs and credentials, run**:
