@@ -63,6 +63,15 @@ update_workshop_var() {
     fi
 }
 
+# Function to check if background build is still running
+check_backstage_build_status() {
+    if [ -n "$BACKSTAGE_BUILD_PID" ] && kill -0 $BACKSTAGE_BUILD_PID 2>/dev/null; then
+        return 0  # Still running
+    else
+        return 1  # Finished or failed
+    fi
+}
+
 print_header "ArgoCD and GitLab Setup"
 
 print_step "Updating kubeconfig to connect to the hub cluster"
@@ -167,11 +176,17 @@ sleep 5
 print_step "Creating Amazon Elastic Container Repository (Amazon ECR) for Backstage image"
 aws ecr create-repository --repository-name backstage --region $AWS_REGION || true
 
+print_step "Starting Backstage image build in parallel"
+print_info "Building Backstage image in background..."
+
+# Create a temporary log file for the background build
+BACKSTAGE_LOG="/tmp/backstage_build_$$.log"
+$SCRIPT_DIR/build_backstage.sh $WORKSHOP_DIR/backstage > "$BACKSTAGE_LOG" 2>&1 &
+BACKSTAGE_BUILD_PID=$!
+print_info "Backstage build started with PID: $BACKSTAGE_BUILD_PID (logs: $BACKSTAGE_LOG)"
+
 print_step "Pre-creating OIDC client secrets to break dependency cycles"
 bootstrap_oidc_secrets
-
-print_step "Building Backstage image"
-$SCRIPT_DIR/build_backstage.sh $WORKSHOP_DIR/backstage
 
 print_step "Logging in to ArgoCD CLI"
 argocd login --username admin --password $IDE_PASSWORD --grpc-web-root-path /argocd $DOMAIN_NAME
@@ -179,11 +194,53 @@ argocd login --username admin --password $IDE_PASSWORD --grpc-web-root-path /arg
 print_info "Listing ArgoCD applications"
 argocd app list
 
+# Check build status
+if check_backstage_build_status; then
+    print_info "Backstage build is still running in parallel..."
+fi
+
 print_step "Syncing bootstrap application"
 argocd app sync bootstrap
 
+# Check build status again
+if check_backstage_build_status; then
+    print_info "Backstage build is still running in parallel..."
+fi
+
 print_info "Checking ArgoCD applications status"
 kubectl get applications -n argocd
+
+print_step "Waiting for Backstage image build to complete"
+print_info "Checking if Backstage build is still running..."
+
+# Check if the process is still running
+if kill -0 $BACKSTAGE_BUILD_PID 2>/dev/null; then
+    print_info "Backstage build is still running, waiting for completion..."
+    if wait $BACKSTAGE_BUILD_PID; then
+        print_success "Backstage image build completed successfully"
+        # Show the last few lines of the build log for confirmation
+        print_info "Build log summary:"
+        tail -n 5 "$BACKSTAGE_LOG" | sed 's/^/  /'
+    else
+        print_error "Backstage image build failed"
+        print_error "Build log (last 20 lines):"
+        tail -n 20 "$BACKSTAGE_LOG" | sed 's/^/  /'
+        exit 1
+    fi
+else
+    # Process already finished, check exit status
+    if wait $BACKSTAGE_BUILD_PID; then
+        print_success "Backstage image build already completed successfully"
+    else
+        print_error "Backstage image build failed"
+        print_error "Build log (last 20 lines):"
+        tail -n 20 "$BACKSTAGE_LOG" | sed 's/^/  /'
+        exit 1
+    fi
+fi
+
+# Clean up the temporary log file
+rm -f "$BACKSTAGE_LOG"
 
 print_success "ArgoCD and GitLab setup completed successfully."
 
