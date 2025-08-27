@@ -104,8 +104,19 @@ set +x
 print_step "Creating GitLab access token for ArgoCD"
 ROOT_TOKEN="root-$IDE_PASSWORD"
 
+# Get the user ID for the GIT_USERNAME
+USER_ID=$(curl -sS -X GET "$GITLAB_URL/api/v4/users?username=$GIT_USERNAME" \
+  -H "PRIVATE-TOKEN: $ROOT_TOKEN" | jq -r '.[0].id')
+
+if [ "$USER_ID" = "null" ] || [ -z "$USER_ID" ]; then
+    print_error "Failed to find user ID for username: $GIT_USERNAME"
+    exit 1
+fi
+
+print_info "Found user ID $USER_ID for username $GIT_USERNAME"
+
 # Create GitLab personal access token for ArgoCD repository access
-GITLAB_TOKEN=$(curl -sS -X POST "$GITLAB_URL/api/v4/users/4/personal_access_tokens" \
+GITLAB_TOKEN=$(curl -sS -X POST "$GITLAB_URL/api/v4/users/$USER_ID/personal_access_tokens" \
   -H "PRIVATE-TOKEN: $ROOT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
