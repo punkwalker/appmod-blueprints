@@ -38,20 +38,24 @@ data:
     spi-login-protocol-openid-connect-legacy-logout-redirect-uri=true
     spi-x509cert-lookup-provider=nginx
     
-    # Enable CORS for admin console and account console
+    # Enable CORS with wildcard for development (more permissive)
     spi-cors-provider=default
-    spi-cors-default-allowed-origins=https://d35j5kjjdl7nh.cloudfront.net
-    spi-cors-default-allowed-methods=GET,POST,PUT,DELETE,OPTIONS
-    spi-cors-default-allowed-headers=Origin,Accept,X-Requested-With,Content-Type,Access-Control-Request-Method,Access-Control-Request-Headers,Authorization
-    spi-cors-default-exposed-headers=Location
+    spi-cors-default-allowed-origins=*
+    spi-cors-default-allowed-methods=GET,POST,PUT,DELETE,OPTIONS,HEAD
+    spi-cors-default-allowed-headers=*
+    spi-cors-default-exposed-headers=Location,Content-Type
     spi-cors-default-allow-credentials=true
-    spi-cors-default-max-age=3600
+    spi-cors-default-max-age=86400
     
-    # Additional security headers to prevent iframe issues
+    # Additional security headers (more permissive for iframe)
     spi-security-headers-provider=default
-    spi-security-headers-default-content-security-policy=frame-ancestors 'self' https://d35j5kjjdl7nh.cloudfront.net; frame-src 'self' https://d35j5kjjdl7nh.cloudfront.net; object-src 'none';
-    spi-security-headers-default-x-frame-options=SAMEORIGIN
+    spi-security-headers-default-content-security-policy=frame-ancestors *; frame-src *; object-src 'none';
+    spi-security-headers-default-x-frame-options=ALLOWALL
     spi-security-headers-default-x-content-type-options=nosniff
     spi-security-headers-default-x-robots-tag=none
     spi-security-headers-default-x-xss-protection=1; mode=block
-    spi-security-headers-default-strict-transport-security=max-age=31536000; includeSubDomains
+    
+    # Additional settings for account console
+    spi-account-provider=default
+    spi-account-default-cors-allowed-origins=*
+    spi-account-default-cors-allowed-methods=GET,POST,PUT,DELETE,OPTIONS,HEAD
