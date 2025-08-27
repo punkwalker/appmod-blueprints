@@ -20,13 +20,20 @@ spec:
           default: us-east-1
           title: Region
           type: string
+        repoHostUrl:
+          type: string
+          default: d31l55m8hkb7r3.cloudfront.net
+          ui:widget: hidden
+        repoUsername:
+          type: string
+          default: user1
+          ui:widget: hidden
+        repoName:
+          type: string
+          default: platform-on-eks-workshop
+          ui:widget: hidden
       title: Configuration Options
   steps:
-    - id: fetchSystem
-      name: Fetch System
-      action: catalog:fetch
-      input:
-        entityRef: system:default/system-info
     - action: fetch:template
       id: fetch-base
       input:
@@ -35,15 +42,18 @@ spec:
           name: ${{ parameters.name }}
           namespace: ${{ parameters.namespace }}
           aws_region: ${{ parameters.aws_region }}
-          repoUrl: d31l55m8hkb7r3.cloudfront.net/user1
+          repoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}
       name: Fetch Base
     - id: publish
-      name: Publishing to a gitea git repository
-      action: publish:gitea
+      name: Publishing to GitLab repository
+      action: publish:gitlab:merge-request
       input:
-        description: CodeBuild create clusters template
-        # Hard coded value for this demo purposes only.
-        repoUrl: d31l55m8hkb7r3.cloudfront.net/user1?repo=${{parameters.name}}
+        description: Create dev and prod clusters template
+        repoUrl: ${{ parameters.repoHostUrl }}?repo=${{parameters.name}}&owner=${{ parameters.repoUsername }}
+        title: Add new dev and prod environment - ${{parameters.name}}
+        branchName: add-${{parameters.name}}-env
+        removeSourceBranch: true
+        commitAction: auto
         defaultBranch: main
     - id: create-argocd-app
       name: Create ArgoCD App
@@ -53,8 +63,7 @@ spec:
         appNamespace: ${{parameters.namespace}}
         argoInstance: in-cluster
         projectName: default
-        # necessary until we generate our own cert
-        repoUrl: https://d31l55m8hkb7r3.cloudfront.net/user1/${{parameters.name}}
+        repoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}/${{parameters.name}}
         path: "manifests"
     - id: register
       name: Register
@@ -67,3 +76,6 @@ spec:
       - title: Open in catalog
         icon: catalog
         entityRef: ${{ steps['register'].output.entityRef }}
+      - title: View Merge Request
+        icon: gitlab
+        url: ${{ steps['publish'].output.mergeRequestUrl }}

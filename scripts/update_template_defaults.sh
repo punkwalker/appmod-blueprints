@@ -92,29 +92,22 @@ update_dev_prod_env_template() {
         print_info "Updated AWS region to $AWS_REGION"
     fi
     
-    # Update the repoUrl in the fetch step to use our GitLab domain (check if it exists first)
-    if yq -e '.spec.steps[] | select(.id == "fetch-base")' "$template_path" > /dev/null 2>&1; then
-        # Check if the values.repoUrl exists and update it
-        if yq -e '.spec.steps[] | select(.id == "fetch-base") | .input.values.repoUrl' "$template_path" > /dev/null 2>&1; then
-            yq -i '(.spec.steps[] | select(.id == "fetch-base") | .input.values.repoUrl) = "'$GITLAB_DOMAIN'/'$GIT_USERNAME'"' "$template_path"
-            print_info "Updated fetch-base repoUrl"
-        fi
+    # Update repoHostUrl parameter (check if it exists first)
+    if yq -e '.spec.parameters[0].properties.repoHostUrl' "$template_path" > /dev/null 2>&1; then
+        yq -i '.spec.parameters[0].properties.repoHostUrl.default = "'$GITLAB_DOMAIN'"' "$template_path"
+        print_info "Updated repoHostUrl to $GITLAB_DOMAIN"
     fi
     
-    # Update the publish step to use our GitLab domain (check if it exists first)
-    if yq -e '.spec.steps[] | select(.id == "publish")' "$template_path" > /dev/null 2>&1; then
-        if yq -e '.spec.steps[] | select(.id == "publish") | .input.repoUrl' "$template_path" > /dev/null 2>&1; then
-            yq -i '(.spec.steps[] | select(.id == "publish") | .input.repoUrl) = "'$GITLAB_DOMAIN'/'$GIT_USERNAME'?repo=${{parameters.name}}"' "$template_path"
-            print_info "Updated publish repoUrl"
-        fi
+    # Update repoUsername parameter (check if it exists first)
+    if yq -e '.spec.parameters[0].properties.repoUsername' "$template_path" > /dev/null 2>&1; then
+        yq -i '.spec.parameters[0].properties.repoUsername.default = "'$GIT_USERNAME'"' "$template_path"
+        print_info "Updated repoUsername to $GIT_USERNAME"
     fi
     
-    # Update the ArgoCD app creation step to use our GitLab domain (check if it exists first)
-    if yq -e '.spec.steps[] | select(.id == "create-argocd-app")' "$template_path" > /dev/null 2>&1; then
-        if yq -e '.spec.steps[] | select(.id == "create-argocd-app") | .input.repoUrl' "$template_path" > /dev/null 2>&1; then
-            yq -i '(.spec.steps[] | select(.id == "create-argocd-app") | .input.repoUrl) = "https://'$GITLAB_DOMAIN'/'$GIT_USERNAME'/${{parameters.name}}"' "$template_path"
-            print_info "Updated create-argocd-app repoUrl"
-        fi
+    # Update repoName parameter (check if it exists first)
+    if yq -e '.spec.parameters[0].properties.repoName' "$template_path" > /dev/null 2>&1; then
+        yq -i '.spec.parameters[0].properties.repoName.default = "'$WORKING_REPO'"' "$template_path"
+        print_info "Updated repoName to $WORKING_REPO"
     fi
     
     print_success "Create Dev and Prod Environment template updated"
