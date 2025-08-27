@@ -496,6 +496,10 @@ metadata:
   namespace: backstage
   annotations:
     argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  labels:
+    app.kubernetes.io/name: backstage
+    app.kubernetes.io/component: config
 type: Opaque
 stringData:
   BACKSTAGE_FRONTEND_URL: https://{{ .Values.ingress_domain_name }}/backstage
