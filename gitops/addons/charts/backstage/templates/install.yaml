@@ -246,7 +246,7 @@ metadata:
   name: backstage
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "25"
+    argocd.argoproj.io/sync-wave: "15"
 spec:
   replicas: 1
   selector:
@@ -425,7 +425,7 @@ metadata:
   name: backstage-oidc
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "15"
+    argocd.argoproj.io/sync-wave: "5"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   secretStoreRef:
@@ -464,7 +464,7 @@ metadata:
   name: backstage-postgres
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "5"
+    argocd.argoproj.io/sync-wave: "1"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   secretStoreRef:
@@ -495,7 +495,7 @@ metadata:
   name: backstage-env-vars
   namespace: backstage
   annotations:
-    argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/sync-wave: "1"
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
   labels:
     app.kubernetes.io/name: backstage
