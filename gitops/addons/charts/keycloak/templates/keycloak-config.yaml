@@ -208,6 +208,35 @@ data:
         "/*"
       ]
     }
+  account-console-client-payload.json: |
+    {
+      "protocol": "openid-connect",
+      "clientId": "account-console",
+      "name": "Account Console",
+      "description": "Account Console Client for Platform Realm",
+      "publicClient": true,
+      "authorizationServicesEnabled": false,
+      "serviceAccountsEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "standardFlowEnabled": true,
+      "frontchannelLogout": false,
+      "attributes": {
+        "saml_idp_initiated_sso_url_name": "",
+        "oauth2.device.authorization.grant.enabled": false,
+        "oidc.ciba.grant.enabled": false,
+        "post.logout.redirect.uris": "https://${DOMAIN_NAME}/keycloak/realms/platform/account/*"
+      },
+      "alwaysDisplayInConsole": false,
+      "rootUrl": "https://${DOMAIN_NAME}/keycloak/realms/platform/account/",
+      "baseUrl": "/realms/platform/account/",
+      "redirectUris": [
+        "https://${DOMAIN_NAME}/keycloak/realms/platform/account/*"
+      ],
+      "webOrigins": [
+        "https://${DOMAIN_NAME}"
+      ]
+    }
   argocd-client-payload.json: |
     {
       "protocol": "openid-connect",
@@ -505,6 +534,31 @@ spec:
               # KARGO_CLIENT_SECRET=$(curl -sS -H "Content-Type: application/json" \
               #   -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
               #   -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${CLIENT_ID} | jq -e -r '.secret')
+
+              echo "creating Account Console client for platform realm"
+              sed "s|\${DOMAIN_NAME}|$DOMAIN_NAME|g" /var/config/account-console-client-payload.json > /tmp/account-console-client-payload.json
+              
+              # Check if account-console client already exists
+              set +e
+              EXISTING_ACCOUNT_CONSOLE_CLIENT=$(curl -sS -H "Content-Type: application/json" \
+                -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                -X GET ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients | jq -e -r '.[] | select(.clientId == "account-console") | .id')
+              CLIENT_EXISTS=$?
+              set -e
+              
+              if [ $CLIENT_EXISTS -eq 0 ]; then
+                echo "Account console client exists, updating configuration..."
+                curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X PUT --data @/tmp/account-console-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients/${EXISTING_ACCOUNT_CONSOLE_CLIENT}
+              else
+                echo "Creating new account console client..."
+                curl -sS -H "Content-Type: application/json" \
+                  -H "Authorization: bearer ${KEYCLOAK_TOKEN}" \
+                  -X POST --data @/tmp/account-console-client-payload.json \
+                  ${KEYCLOAK_URL}/admin/realms/${REALM_NAME}/clients
+              fi
 
               ARGOCD_PASSWORD=$(./kubectl -n argocd get secret ide-password -o jsonpath="{.data.password}" | base64 -d)
 
