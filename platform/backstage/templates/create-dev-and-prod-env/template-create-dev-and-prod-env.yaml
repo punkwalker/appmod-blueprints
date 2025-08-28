@@ -49,13 +49,20 @@ spec:
           repoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}
       name: Fetch Base
     - id: create-repo
-      name: Create GitLab Repository
-      action: gitlab:repo:create
+      name: Create GitLab Repository via API
+      action: http:backstage:request
       input:
-        repoUrl: ${{ parameters.repoHostUrl }}?repo=${{ parameters.name }}&owner=${{ parameters.repoUsername }}
-        description: 'Dev and Prod environment created by Backstage'
-        visibility: 'private'
-        defaultBranch: main
+        method: POST
+        url: https://${{ parameters.repoHostUrl }}/api/v4/projects
+        headers:
+          PRIVATE-TOKEN: ${{ secrets.user.token || env.GIT_PASSWORD }}
+          Content-Type: application/json
+        body:
+          name: ${{ parameters.name }}
+          path: ${{ parameters.name }}
+          description: Dev and Prod environment created by Backstage
+          visibility: private
+          initialize_with_readme: true
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
