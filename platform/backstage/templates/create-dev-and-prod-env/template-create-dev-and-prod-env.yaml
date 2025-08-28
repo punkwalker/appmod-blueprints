@@ -48,100 +48,15 @@ spec:
           aws_region: ${{ parameters.aws_region }}
           repoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}
       name: Fetch Base
-    - id: create-repo-job
-      name: Create Repository via Kubernetes Job
-      action: kubernetes:apply
+    - id: create-repo
+      name: Create GitLab Repository
+      action: gitlab:repo:push
       input:
-        manifestPath: create-repo-job.yaml
-        namespaced: true
-        manifest:
-          apiVersion: batch/v1
-          kind: Job
-          metadata:
-            name: create-repo-${{ parameters.name }}-${{ '' | now | date('unix') }}
-            namespace: backstage
-          spec:
-            ttlSecondsAfterFinished: 300
-            template:
-              spec:
-                restartPolicy: Never
-                containers:
-                - name: create-repo
-                  image: amazon/aws-cli:latest
-                  command:
-                  - /bin/bash
-                  - -c
-                  - |
-                    # Install required tools
-                    yum update -y && yum install -y curl jq
-                    
-                    # Set environment variables
-                    export GITLAB_URL="https://${{ parameters.repoHostUrl }}"
-                    export GITLABPW="$GITLAB_PASSWORD"
-                    export GIT_USERNAME="${{ parameters.repoUsername }}"
-                    
-                    # Create repository function
-                    create_repository() {
-                        local repo_name="$1"
-                        echo "Creating repository: $repo_name"
-                        
-                        # Get CSRF token and login
-                        local csrf_token=$(curl -k -s -c "/tmp/gitlab_cookies.txt" "$GITLAB_URL/users/sign_in" 2>/dev/null | grep -o 'csrf-token.*content="[^"]*"' | sed 's/.*content="\([^"]*\)".*/\1/' | head -1)
-                        
-                        if [ -z "$csrf_token" ]; then
-                            echo "Failed to get CSRF token"
-                            return 1
-                        fi
-                        
-                        echo "Got CSRF token: ${csrf_token:0:10}..."
-                        
-                        # Login
-                        curl -k -s -b "/tmp/gitlab_cookies.txt" -c "/tmp/gitlab_cookies.txt" \
-                            -d "authenticity_token=$csrf_token" \
-                            -d "user[login]=$GIT_USERNAME" \
-                            -d "user[password]=$GITLABPW" \
-                            -d "user[remember_me]=0" \
-                            -X POST \
-                            "$GITLAB_URL/users/sign_in" > /dev/null 2>&1
-                        
-                        # Get project CSRF token
-                        local project_csrf=$(curl -k -s -b "/tmp/gitlab_cookies.txt" "$GITLAB_URL/projects/new" 2>/dev/null | grep -o 'csrf-token.*content="[^"]*"' | sed 's/.*content="\([^"]*\)".*/\1/' | head -1)
-                        
-                        if [ -n "$project_csrf" ]; then
-                            echo "Got project CSRF token: ${project_csrf:0:10}..."
-                            
-                            # Create project
-                            local result=$(curl -k -s -b "/tmp/gitlab_cookies.txt" \
-                                -d "authenticity_token=$project_csrf" \
-                                -d "project[name]=$repo_name" \
-                                -d "project[path]=$repo_name" \
-                                -d "project[description]=Repository created by Backstage template" \
-                                -d "project[visibility_level]=10" \
-                                -d "project[initialize_with_readme]=1" \
-                                -X POST \
-                                "$GITLAB_URL/projects" 2>/dev/null)
-                            
-                            if echo "$result" | grep -q "You are being.*redirected"; then
-                                echo "Repository $repo_name created successfully!"
-                                return 0
-                            else
-                                echo "Failed to create repository $repo_name"
-                                return 1
-                            fi
-                        else
-                            echo "Failed to get project creation CSRF token"
-                            return 1
-                        fi
-                    }
-                    
-                    # Create the repository
-                    create_repository "${{ parameters.name }}"
-                  env:
-                  - name: GITLAB_PASSWORD
-                    valueFrom:
-                      secretKeyRef:
-                        name: git-credentials
-                        key: GIT_PASSWORD
+        repoUrl: ${{ parameters.repoHostUrl }}?repo=${{ parameters.name }}&owner=${{ parameters.repoUsername }}
+        defaultBranch: main
+        gitCommitMessage: 'Initial commit from Backstage template'
+        gitAuthorName: 'Backstage'
+        gitAuthorEmail: 'backstage@workshop.aws'
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
