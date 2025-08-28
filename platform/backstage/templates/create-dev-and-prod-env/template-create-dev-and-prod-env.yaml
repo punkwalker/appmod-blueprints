@@ -48,22 +48,6 @@ spec:
           aws_region: ${{ parameters.aws_region }}
           repoUrl: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}
       name: Fetch Base
-    - id: create-repo
-      name: Create GitLab Repository via API
-      action: http:backstage:request
-      input:
-        method: POST
-        path: /api/v4/projects
-        baseUrl: https://${{ parameters.repoHostUrl }}
-        headers:
-          PRIVATE-TOKEN: glpat-uwc7Reg5OticgyOV2D4XDG86MQp1OjIH.01.0w1tanjme
-          Content-Type: application/json
-        body:
-          name: ${{ parameters.name }}
-          path: ${{ parameters.name }}
-          description: Dev and Prod environment created by Backstage
-          visibility: private
-          initialize_with_readme: true
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
