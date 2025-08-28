@@ -312,6 +312,12 @@ spec:
               value: development
             - name: NODE_OPTIONS
               value: --no-node-snapshot
+            - name: HTTP_TIMEOUT
+              value: "300000"
+            - name: REQUEST_TIMEOUT  
+              value: "300000"
+            - name: GITLAB_REQUEST_TIMEOUT
+              value: "300000"
           envFrom:
             - secretRef:
                 name: backstage-env-vars
