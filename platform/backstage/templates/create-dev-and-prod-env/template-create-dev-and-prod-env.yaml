@@ -56,7 +56,7 @@ spec:
         path: /api/v4/projects
         baseUrl: https://${{ parameters.repoHostUrl }}
         headers:
-          PRIVATE-TOKEN: ${{ secrets.user.token || env.GIT_PASSWORD }}
+          PRIVATE-TOKEN: glpat-uwc7Reg5OticgyOV2D4XDG86MQp1OjIH.01.0w1tanjme
           Content-Type: application/json
         body:
           name: ${{ parameters.name }}
