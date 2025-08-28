@@ -50,13 +50,12 @@ spec:
       name: Fetch Base
     - id: create-repo
       name: Create GitLab Repository
-      action: publish:gitlab
+      action: gitlab:repo:create
       input:
         repoUrl: ${{ parameters.repoHostUrl }}?repo=${{ parameters.name }}&owner=${{ parameters.repoUsername }}
+        description: 'Dev and Prod environment created by Backstage'
+        visibility: 'private'
         defaultBranch: main
-        gitCommitMessage: 'Initial commit from Backstage template'
-        gitAuthorName: 'Backstage'
-        gitAuthorEmail: 'backstage@workshop.aws'
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
