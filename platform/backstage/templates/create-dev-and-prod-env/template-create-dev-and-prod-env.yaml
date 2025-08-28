@@ -140,8 +140,8 @@ spec:
                   - name: GITLAB_PASSWORD
                     valueFrom:
                       secretKeyRef:
-                        name: gitlab-credentials
-                        key: password
+                        name: git-credentials
+                        key: GIT_PASSWORD
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
