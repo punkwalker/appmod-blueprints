@@ -50,17 +50,17 @@ spec:
       name: Fetch Base
     - id: create-repo
       name: Create GitLab Repository
-      action: roadiehq:utils:fs:write
+      action: http:backstage:request
       input:
-        path: create-repo.sh
-        content: |
-          #!/bin/bash
-          /home/ec2-user/environment/platform-on-eks-workshop/scripts/gitlab-create-repo.sh "${{ parameters.name }}"
-    - id: run-create-repo
-      name: Execute Repository Creation
-      action: roadiehq:utils:shell:execute
-      input:
-        command: chmod +x create-repo.sh && ./create-repo.sh
+        method: POST
+        path: /proxy/gitlab/api/v4/projects
+        headers:
+          Content-Type: application/json
+        body:
+          name: ${{ parameters.name }}
+          path: ${{ parameters.name }}
+          visibility: private
+          initialize_with_readme: true
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
