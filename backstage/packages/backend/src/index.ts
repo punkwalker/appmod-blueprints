@@ -49,7 +49,6 @@ backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 
 // kubernetes
 backend.add(import('@backstage/plugin-kubernetes-backend'));
-backend.add(import('@backstage/plugin-scaffolder-backend-module-kubernetes'));
 
 // Internal Developer Platform custom plugins
 backend.add(authModuleKeycloakOIDCProvider);

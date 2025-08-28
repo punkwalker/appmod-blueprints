@@ -79,31 +79,6 @@ spec:
         branchName: add-${{parameters.name}}-env
         removeSourceBranch: true
         commitAction: auto
-    - id: create-argocd-app
-      name: Create ArgoCD Application
-      action: kubernetes:apply
-      input:
-        manifestPath: argocd-application.yaml
-        namespaced: true
-        manifest:
-          apiVersion: argoproj.io/v1alpha1
-          kind: Application
-          metadata:
-            name: ${{parameters.name}}
-            namespace: argocd
-          spec:
-            project: default
-            source:
-              repoURL: https://${{ parameters.repoHostUrl }}/${{ parameters.repoUsername }}/${{parameters.name}}
-              targetRevision: HEAD
-              path: manifests
-            destination:
-              server: https://kubernetes.default.svc
-              namespace: ${{parameters.namespace}}
-            syncPolicy:
-              automated:
-                prune: true
-                selfHeal: true
     - id: register
       name: Register
       action: catalog:register
