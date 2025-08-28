@@ -57,6 +57,7 @@ spec:
         gitCommitMessage: 'Initial commit from Backstage template'
         gitAuthorName: 'Backstage'
         gitAuthorEmail: 'backstage@workshop.aws'
+        timeout: 300000  # 5 minutes timeout
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
