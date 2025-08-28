@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-#DEBUG=1 $BASE_DIR/platform/infra/terraform/hub/destroy.sh
+#DEBUG=1 $BASE_DIR/platform/infra/terraform/hub/deploy.sh --cluster-name ${CLUSTER_NAME}
 
 set -euo pipefail
 

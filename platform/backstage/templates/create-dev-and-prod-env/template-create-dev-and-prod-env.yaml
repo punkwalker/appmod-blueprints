@@ -27,7 +27,7 @@ spec:
           type: string
         repoHostUrl:
           type: string
-          default: d31l55m8hkb7r3.cloudfront.net
+          default: d1vvjck0a1cre3.cloudfront.net
           ui:widget: hidden
         repoUsername:
           type: string
