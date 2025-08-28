@@ -17,6 +17,10 @@ source "$SCRIPT_DIR/colors.sh"
 export GITLAB_URL="https://d31l55m8hkb7r3.cloudfront.net"
 export GITLAB_PASSWORD="M0DZcEkDbyJiRLdJ9OW7kxj7eYeSbmb8"
 export REPO_ROOT=$(git rev-parse --show-toplevel)
+# Get environment variables
+export GITLAB_URL=${GITLAB_URL:-$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[0].Id, 'gitlab')].DomainName | [0]" --output text | sed 's/^/https:\/\//')}
+export GITLAB_PASSWORD=${GITLAB_PASSWORD:-$IDE_PASSWORD}
+export GIT_USERNAME=${GIT_USERNAME:-"root"}
 export WORK_DIR="/tmp/gitlab-setup-$$"
 
 print_header "GitLab Repository Creation Script"
@@ -28,14 +32,14 @@ setup_git() {
     git config --global user.email "participants@workshops.aws"
     git config --global user.name "Workshop Participant"
     git config --global credential.helper store
-    echo "https://root:$GITLAB_PASSWORD@d31l55m8hkb7r3.cloudfront.net" > ~/.git-credentials
+    echo "https://$GIT_USERNAME:$GITLAB_PASSWORD@$(echo $GITLAB_URL | sed 's|https://||')" > ~/.git-credentials
     print_success "Git configured successfully"
 }
 
 # Function to check if repository exists and has content
 check_repo_status() {
     local repo_name=$1
-    local git_url="https://root:$GITLAB_PASSWORD@d31l55m8hkb7r3.cloudfront.net/root/$repo_name.git"
+    local git_url="https://$GIT_USERNAME:$GITLAB_PASSWORD@$(echo $GITLAB_URL | sed 's|https://||')/$GIT_USERNAME/$repo_name.git"
     
     print_info "Checking repository: $repo_name"
     

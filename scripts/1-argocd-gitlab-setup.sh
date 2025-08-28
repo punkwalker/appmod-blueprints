@@ -141,6 +141,26 @@ fi
 
 print_info "GitLab access token created: $GITLAB_TOKEN"
 
+# Store GitLab token in AWS Secrets Manager for use by other services (like Backstage)
+print_step "Storing GitLab token in AWS Secrets Manager"
+aws secretsmanager create-secret \
+    --name "peeks-workshop-gitops-gitlab-pat" \
+    --description "GitLab Personal Access Token for repository operations" \
+    --secret-string "{\"token\":\"$GITLAB_TOKEN\",\"username\":\"$GIT_USERNAME\",\"hostname\":\"$(echo $GITLAB_URL | sed 's|https://||')\",\"working_repo\":\"$WORKING_REPO\"}" \
+    --tags '[
+        {"Key":"Environment","Value":"Platform"},
+        {"Key":"Purpose","Value":"GitLab API Access"},
+        {"Key":"ManagedBy","Value":"ArgoCD Setup Script"},
+        {"Key":"Application","Value":"GitLab"}
+    ]' \
+    --region $AWS_REGION 2>/dev/null || \
+aws secretsmanager update-secret \
+    --secret-id "peeks-workshop-gitops-gitlab-pat" \
+    --secret-string "{\"token\":\"$GITLAB_TOKEN\",\"username\":\"$GIT_USERNAME\",\"hostname\":\"$(echo $GITLAB_URL | sed 's|https://||')\",\"working_repo\":\"$WORKING_REPO\"}" \
+    --region $AWS_REGION
+
+print_success "GitLab token stored in AWS Secrets Manager: peeks-workshop-gitops-gitlab-pat"
+
 # Test the token
 print_info "Testing GitLab token access..."
 TOKEN_TEST=$(curl -s -H "PRIVATE-TOKEN: $GITLAB_TOKEN" "$GITLAB_URL/api/v4/projects/$GIT_USERNAME%2F$WORKING_REPO" | jq -r '.path_with_namespace // .message')
