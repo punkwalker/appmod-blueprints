@@ -53,10 +53,8 @@ spec:
       action: gitlab:repo:push
       input:
         repoUrl: ${{ parameters.repoHostUrl }}?repo=${{ parameters.name }}&owner=${{ parameters.repoUsername }}
-        defaultBranch: main
-        gitCommitMessage: 'Initial commit from Backstage template'
-        gitAuthorName: 'Backstage'
-        gitAuthorEmail: 'backstage@workshop.aws'
+        branchName: main
+        commitMessage: 'Initial commit from Backstage template'
     - id: publish
       name: Publishing to GitLab repository
       action: publish:gitlab:merge-request
