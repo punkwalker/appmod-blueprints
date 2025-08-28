@@ -39,6 +39,7 @@ locals {
   argocd_namespace    = "argocd"
   adot_collector_namespace = "adot-collector-kubeprometheus"
   adot_collector_service_account = "adot-collector-kubeprometheus"
+  ingress_security_groups = "${aws_security_group.ingress_http.id},${aws_security_group.ingress_https.id}"
 
   external_secrets = {
     namespace             = "external-secrets"
@@ -146,6 +147,9 @@ locals {
       amp_endpoint_url = "${data.aws_ssm_parameter.amp_endpoint.value}"
       adot_collector_namespace = local.adot_collector_namespace
       adot_collector_service_account = local.adot_collector_service_account
+    },
+    {
+      ingress_security_groups = local.ingress_security_groups
     },
     #try(local.external_dns_addons_metadata, {})  # Will default to empty map if not defined
     #can(local.external_dns_addons_metadata) ? local.external_dns_addons_metadata : {}  # Will default to empty map if not defined

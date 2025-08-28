@@ -8,16 +8,34 @@ ROOTDIR="$(cd ${SCRIPTDIR}/../..; pwd )"
 
 if [[ $# -eq 0 ]] ; then
     echo "No arguments supplied"
-    echo "Usage: deploy.sh <environment> [--cluster-name-prefix <prefix>]"
+    echo "Usage: deploy.sh <environment> [--cluster-name-prefix <prefix>] [--deploy-db]"
     echo "Example: deploy.sh dev"
-    echo "Example with custom cluster name prefix: deploy.sh dev --cluster-name-prefix peeks-spoke-test"
+    echo "Example with database: deploy.sh dev --deploy-db"
+    echo "Example with custom cluster name prefix: deploy.sh dev --cluster-name-prefix peeks-spoke-test --deploy-db"
+    echo ""
+    echo "Required environment variables:"
+    echo "  TFSTATE_BUCKET_NAME - S3 bucket for Terraform state"
+    echo "  AWS_REGION - AWS region for resources"
     exit 1
 fi
+
+# Check required environment variables
+if [[ -z "${TFSTATE_BUCKET_NAME:-}" ]]; then
+    echo "Error: TFSTATE_BUCKET_NAME environment variable is required"
+    exit 1
+fi
+
+if [[ -z "${AWS_REGION:-}" ]]; then
+    echo "Error: AWS_REGION environment variable is required"
+    exit 1
+fi
+
 env=$1
 shift
 
 # Parse additional command line arguments
 CLUSTER_NAME_PREFIX=""
+DEPLOY_DB=false
 
 while [[ $# -gt 0 ]]; do
   key="$1"
@@ -27,13 +45,42 @@ while [[ $# -gt 0 ]]; do
       shift
       shift
       ;;
+    --deploy-db)
+      DEPLOY_DB=true
+      shift
+      ;;
     *)
       shift
       ;;
   esac
 done
 
-echo "Deploying $env with "workspaces/${env}.tfvars" ..."
+echo "Using S3 bucket: ${TFSTATE_BUCKET_NAME}"
+echo "Using AWS region: ${AWS_REGION}"
+echo "Deploying $env with workspaces/${env}.tfvars ..."
+
+# Deploy database first if requested
+if [ "$DEPLOY_DB" = true ]; then
+  echo "Deploying database for $env environment..."
+  
+  terraform -chdir=${SCRIPTDIR}/db init -reconfigure \
+    -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="key=spokes/db/${env}/terraform.tfstate" \
+    -backend-config="region=${AWS_REGION}"
+  
+  terraform -chdir=${SCRIPTDIR}/db workspace select -or-create $env
+  
+  if [ -n "$CLUSTER_NAME_PREFIX" ]; then
+    terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" -auto-approve
+  else
+    terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -auto-approve
+  fi
+  
+  echo "Database deployment completed for $env"
+fi
+
+# Deploy EKS cluster
+echo "Deploying EKS cluster for $env environment..."
 
 terraform -chdir=$SCRIPTDIR init --upgrade
 terraform -chdir=$SCRIPTDIR workspace select -or-create $env
