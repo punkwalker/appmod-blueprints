@@ -53,7 +53,8 @@ spec:
       action: http:backstage:request
       input:
         method: POST
-        url: https://${{ parameters.repoHostUrl }}/api/v4/projects
+        path: /api/v4/projects
+        baseUrl: https://${{ parameters.repoHostUrl }}
         headers:
           PRIVATE-TOKEN: ${{ secrets.user.token || env.GIT_PASSWORD }}
           Content-Type: application/json
