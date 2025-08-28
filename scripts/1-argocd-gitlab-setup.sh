@@ -267,6 +267,22 @@ else
     print_warning "Template update script not found, skipping template update"
 fi
 
+# Export additional environment variables for tools
+print_step "Setting up environment variables for tools"
+export KEYCLOAKIDPPASSWORD=$(kubectl get secret keycloak-config -n keycloak -o jsonpath='{.data.USER_PASSWORD}' 2>/dev/null | base64 -d || echo "")
+export BACKSTAGEURL="https://$DOMAIN_NAME/backstage"
+export GITLABPW="$IDE_PASSWORD"
+export ARGOCDPW="$IDE_PASSWORD"
+export ARGOCDURL="https://$DOMAIN_NAME/argocd"
+export ARGOWFURL="https://$DOMAIN_NAME/argo-workflows"
+
+update_workshop_var "KEYCLOAKIDPPASSWORD" "$KEYCLOAKIDPPASSWORD"
+update_workshop_var "BACKSTAGEURL" "$BACKSTAGEURL"
+update_workshop_var "GITLABPW" "$GITLABPW"
+update_workshop_var "ARGOCDPW" "$ARGOCDPW"
+update_workshop_var "ARGOCDURL" "$ARGOCDURL"
+update_workshop_var "ARGOWFURL" "$ARGOWFURL"
+
 print_success "ArgoCD and GitLab setup completed successfully."
 
 print_header "Access Information"
