@@ -1,7 +1,7 @@
-vpc_name                        = "hub-cluster"
+vpc_name                        = "peeks-hub-cluster"
 kubernetes_version              = "1.32"
-cluster_name                    = "hub-cluster"
-ingress_name                    = "hub-ingress"
+cluster_name                    = "peeks-hub-cluster"
+ingress_name                    = "peeks-hub-ingress"
 tenant                          = "tenant1"
 
 git_hostname                    = ""
@@ -30,4 +30,4 @@ gitops_workload_repo_revision   = "main"
 
 
 # AWS Accounts used for demo purposes (cluster1 cluster2)
-account_ids = "665742499430" # update this with your spoke aws accounts ids
+account_ids = "<aws_account_id>" # update this with your spoke aws accounts ids

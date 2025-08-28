@@ -82,7 +82,13 @@ fi
 # Deploy EKS cluster
 echo "Deploying EKS cluster for $env environment..."
 
-terraform -chdir=$SCRIPTDIR init --upgrade
+if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
+  terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${TFSTATE_BUCKET_NAME}" -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}"
+else
+  terraform -chdir=$SCRIPTDIR init --upgrade
+  echo "WARNING: TFSTATE_BUCKET_NAME and/or TFSTATE_LOCK_TABLE environment variables not set."
+  echo "WARNING: Terraform state will be stored locally and may be lost!"
+fi
 terraform -chdir=$SCRIPTDIR workspace select -or-create $env
 
 # Apply with custom cluster name prefix if provided
