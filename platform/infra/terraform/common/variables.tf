@@ -39,7 +39,7 @@ variable "gitea_user" {
   type = string
   default = "user1"
 }
-variable "gitea_password" {
+variable "git_password" {
   description = "Password to login on the Gitea instance"
   type = string
   sensitive = true

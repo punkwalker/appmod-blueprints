@@ -115,11 +115,11 @@ data:
     #   - baseUrl: https://cnoe.localtest.me:8443/gitea
     #     host: cnoe.localtest.me:8443
     #     username: ${GITEA_USERNAME}
-    #     password: ${GITEA_PASSWORD}
+    #     password: ${GIT_PASSWORD}
     #   - baseUrl: https://cnoe.localtest.me/gitea
     #     host: cnoe.localtest.me
     #     username: ${GITEA_USERNAME}
-    #     password: ${GITEA_PASSWORD}
+    #     password: ${GIT_PASSWORD}
     #  github:
     #    - host: github.com
     #      apps:
