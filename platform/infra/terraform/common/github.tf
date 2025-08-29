@@ -5,16 +5,15 @@
 # export TF_VAR_gitea_user=$GITHUB_USERNAME
 # export TF_VAR_gitea_password=$GITHUB_TOKEN
 
-
-
-resource "github_repository" "gitops_repo" {
-  # do not create if var.create_github_repos is false
-  for_each = { for k, v in local.gitops_repos : k => v if var.create_github_repos }
-  #for_each   = local.gitops_repos
-  name       = "${local.gitops_repos[each.key].name}"
-  visibility = "private"
-  auto_init  = false
-}
+# Commented out - depends on removed local.gitops_repos
+# resource "github_repository" "gitops_repo" {
+#   # do not create if var.create_github_repos is false
+#   for_each = { for k, v in local.gitops_repos : k => v if var.create_github_repos }
+#   #for_each   = local.gitops_repos
+#   name       = "${local.gitops_repos[each.key].name}"
+#   visibility = "private"
+#   auto_init  = false
+# }
 
 provider "github" {
   token = var.create_github_repos ? var.gitea_password : null
