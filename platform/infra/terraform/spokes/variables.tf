@@ -70,3 +70,124 @@ variable "cluster_name_prefix" {
   type        = string
   default     = "peeks-spoke"
 }
+
+# GitOps repository configuration
+variable "git_hostname" {
+  description = "Git hostname"
+  type        = string
+  default     = ""
+}
+
+variable "git_org_name" {
+  description = "Git organization name"
+  type        = string
+  default     = "user1"
+}
+
+variable "gitops_addons_repo_name" {
+  description = "GitOps addons repository name"
+  type        = string
+  default     = "platform-on-eks-workshop"
+}
+
+variable "gitops_addons_repo_path" {
+  description = "GitOps addons repository path"
+  type        = string
+  default     = "bootstrap"
+}
+
+variable "gitops_addons_repo_base_path" {
+  description = "GitOps addons repository base path"
+  type        = string
+  default     = "gitops/addons/"
+}
+
+variable "gitops_addons_repo_revision" {
+  description = "GitOps addons repository revision"
+  type        = string
+  default     = "main"
+}
+
+variable "gitops_fleet_repo_name" {
+  description = "GitOps fleet repository name"
+  type        = string
+  default     = "platform-on-eks-workshop"
+}
+
+variable "gitops_fleet_repo_path" {
+  description = "GitOps fleet repository path"
+  type        = string
+  default     = "bootstrap"
+}
+
+variable "gitops_fleet_repo_base_path" {
+  description = "GitOps fleet repository base path"
+  type        = string
+  default     = "gitops/fleet/"
+}
+
+variable "gitops_fleet_repo_revision" {
+  description = "GitOps fleet repository revision"
+  type        = string
+  default     = "main"
+}
+
+variable "gitops_workload_repo_name" {
+  description = "GitOps workload repository name"
+  type        = string
+  default     = "platform-on-eks-workshop"
+}
+
+variable "gitops_workload_repo_path" {
+  description = "GitOps workload repository path"
+  type        = string
+  default     = ""
+}
+
+variable "gitops_workload_repo_base_path" {
+  description = "GitOps workload repository base path"
+  type        = string
+  default     = "gitops/workloads/"
+}
+
+variable "gitops_workload_repo_revision" {
+  description = "GitOps workload repository revision"
+  type        = string
+  default     = "main"
+}
+
+variable "gitops_platform_repo_name" {
+  description = "GitOps platform repository name"
+  type        = string
+  default     = "platform-on-eks-workshop"
+}
+
+variable "gitops_platform_repo_path" {
+  description = "GitOps platform repository path"
+  type        = string
+  default     = ""
+}
+
+variable "gitops_platform_repo_base_path" {
+  description = "GitOps platform repository base path"
+  type        = string
+  default     = "gitops/platform/"
+}
+
+variable "gitops_platform_repo_revision" {
+  description = "GitOps platform repository revision"
+  type        = string
+  default     = "main"
+}
+
+variable "ingress_domain_name" {
+  description = "Ingress domain name"
+  type        = string
+  default     = ""
+}
+
+variable "gitlab_domain_name" {
+  description = "GitLab domain name"
+  type        = string
+  default     = ""
+}

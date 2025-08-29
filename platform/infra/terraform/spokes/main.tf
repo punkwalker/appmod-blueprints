@@ -41,6 +41,13 @@ locals {
   adot_collector_service_account = "adot-collector-kubeprometheus"
   ingress_security_groups = "${aws_security_group.ingress_http.id},${aws_security_group.ingress_https.id}"
 
+  # GitOps repository URLs
+  git_hostname = var.git_hostname == "" ? "d1vvjck0a1cre3.cloudfront.net" : var.git_hostname
+  gitops_addons_repo_url = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_addons_repo_name}.git"
+  gitops_fleet_repo_url = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_fleet_repo_name}.git"
+  gitops_workload_repo_url = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_workload_repo_name}.git"
+  gitops_platform_repo_url = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_platform_repo_name}.git"
+
   external_secrets = {
     namespace             = "external-secrets"
     service_account       = "external-secrets-sa"
@@ -147,6 +154,41 @@ locals {
       amp_endpoint_url = "${data.aws_ssm_parameter.amp_endpoint.value}"
       adot_collector_namespace = local.adot_collector_namespace
       adot_collector_service_account = local.adot_collector_service_account
+    },
+    {
+      # GitOps repository configuration
+      addons_repo_url = local.gitops_addons_repo_url
+      addons_repo_path = var.gitops_addons_repo_path
+      addons_repo_basepath = var.gitops_addons_repo_base_path
+      addons_repo_revision = var.gitops_addons_repo_revision
+      fleet_repo_url = local.gitops_fleet_repo_url
+      fleet_repo_path = var.gitops_fleet_repo_path
+      fleet_repo_basepath = var.gitops_fleet_repo_base_path
+      fleet_repo_revision = var.gitops_fleet_repo_revision
+      workload_repo_url = local.gitops_workload_repo_url
+      workload_repo_path = var.gitops_workload_repo_path
+      workload_repo_basepath = var.gitops_workload_repo_base_path
+      workload_repo_revision = var.gitops_workload_repo_revision
+      platform_repo_url = local.gitops_platform_repo_url
+      platform_repo_path = var.gitops_platform_repo_path
+      platform_repo_basepath = var.gitops_platform_repo_base_path
+      platform_repo_revision = var.gitops_platform_repo_revision
+    },
+    {
+      # ArgoCD configuration
+      argocd_namespace = local.argocd_namespace
+      create_argocd_namespace = "false"
+    },
+    {
+      # Domain configuration
+      ingress_domain_name = var.ingress_domain_name == "" ? "dlu6mbvnpgi1g.cloudfront.net" : var.ingress_domain_name
+      gitlab_domain_name = var.gitlab_domain_name == "" ? local.git_hostname : var.gitlab_domain_name
+    },
+    {
+      # Git configuration
+      git_username = var.git_org_name
+      working_repo = var.gitops_addons_repo_name
+      use_ack = "true"
     },
     {
       ingress_security_groups = local.ingress_security_groups
