@@ -19,4 +19,10 @@ terraform {
       version = ">= 2.0"
     }
   }
+
+  # Backend configuration provided via CLI parameters
+  backend "s3" {
+    # bucket and dynamodb_table provided via -backend-config
+    key = "hub/terraform.tfstate"
+  }
 }
