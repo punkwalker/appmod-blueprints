@@ -180,12 +180,6 @@ variable "gitops_platform_repo_revision" {
   default     = "main"
 }
 
-variable "ingress_domain_name" {
-  description = "Ingress domain name"
-  type        = string
-  default     = ""
-}
-
 variable "gitlab_domain_name" {
   description = "GitLab domain name"
   type        = string

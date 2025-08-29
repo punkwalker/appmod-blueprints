@@ -59,6 +59,36 @@ echo "Using S3 bucket: ${TFSTATE_BUCKET_NAME}"
 echo "Using AWS region: ${AWS_REGION}"
 echo "Deploying $env with workspaces/${env}.tfvars ..."
 
+# Wait for GitLab CloudFront distribution to be created by hub cluster
+echo "Waiting for GitLab CloudFront distribution to be created by hub cluster..."
+GITLAB_DOMAIN=""
+MAX_ATTEMPTS=30
+ATTEMPT=0
+
+while [[ $ATTEMPT -lt $MAX_ATTEMPTS ]]; do
+    echo "Attempt $((ATTEMPT + 1))/$MAX_ATTEMPTS: Checking for GitLab CloudFront distribution..."
+    
+    # Check for GitLab distribution
+    GITLAB_DOMAIN=$(aws cloudfront list-distributions --query "DistributionList.Items[?contains(Origins.Items[0].Id, 'gitlab')].DomainName | [0]" --output text 2>/dev/null || echo "None")
+    
+    if [[ "$GITLAB_DOMAIN" != "None" && -n "$GITLAB_DOMAIN" ]]; then
+        echo "✓ Found GitLab CloudFront distribution: ${GITLAB_DOMAIN}"
+        break
+    fi
+    
+    if [[ $ATTEMPT -eq $((MAX_ATTEMPTS - 1)) ]]; then
+        echo "⚠️  Warning: GitLab CloudFront distribution not found after $MAX_ATTEMPTS attempts"
+        echo "   GitLab domain: ${GITLAB_DOMAIN}"
+        echo "   Continuing with empty value..."
+        GITLAB_DOMAIN=""
+        break
+    fi
+    
+    echo "   Waiting 30 seconds before next attempt..."
+    sleep 30
+    ATTEMPT=$((ATTEMPT + 1))
+done
+
 # Deploy database first if requested
 if [ "$DEPLOY_DB" = true ]; then
   echo "Deploying database for $env environment..."
@@ -94,8 +124,17 @@ terraform -chdir=$SCRIPTDIR workspace select -or-create $env
 # Apply with custom cluster name prefix if provided
 if [ -n "$CLUSTER_NAME_PREFIX" ]; then
   echo "Using custom cluster name prefix: $CLUSTER_NAME_PREFIX"
-  terraform -chdir=$SCRIPTDIR apply -var-file="workspaces/${env}.tfvars" -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" -auto-approve
+  terraform -chdir=$SCRIPTDIR apply \
+    -var-file="workspaces/${env}.tfvars" \
+    -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" \
+    -var="git_hostname=$GITLAB_DOMAIN" \
+    -var="gitlab_domain_name=$GITLAB_DOMAIN" \
+    -auto-approve
 else
   echo "Using default cluster name prefix: peeks-spoke"
-  terraform -chdir=$SCRIPTDIR apply -var-file="workspaces/${env}.tfvars" -auto-approve
+  terraform -chdir=$SCRIPTDIR apply \
+    -var-file="workspaces/${env}.tfvars" \
+    -var="git_hostname=$GITLAB_DOMAIN" \
+    -var="gitlab_domain_name=$GITLAB_DOMAIN" \
+    -auto-approve
 fi

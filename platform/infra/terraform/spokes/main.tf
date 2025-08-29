@@ -181,7 +181,7 @@ locals {
     },
     {
       # Domain configuration
-      ingress_domain_name = var.ingress_domain_name == "" ? "dlu6mbvnpgi1g.cloudfront.net" : var.ingress_domain_name
+      ingress_domain_name = aws_cloudfront_distribution.ingress.domain_name
       gitlab_domain_name = var.gitlab_domain_name == "" ? local.git_hostname : var.gitlab_domain_name
     },
     {
