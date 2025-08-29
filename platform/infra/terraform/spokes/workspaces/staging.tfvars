@@ -23,6 +23,3 @@ gitops_workload_repo_name       = "platform-on-eks-workshop"
 gitops_workload_repo_base_path  = "gitops/workloads/"
 gitops_workload_repo_path       = ""
 gitops_workload_repo_revision   = "main"
-
-ingress_domain_name             = ""
-gitlab_domain_name              = ""

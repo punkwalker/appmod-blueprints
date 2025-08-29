@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+#usage:
+#DEBUG=1 $BASE_DIR/platform/infra/terraform/spokes/deploy.sh ${SPOKE} --cluster-name-prefix ${CLUSTER_NAME_PREFIX}
+
 set -euo pipefail
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
