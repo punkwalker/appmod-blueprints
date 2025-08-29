@@ -323,41 +323,6 @@ module "eks" {
       principal_arn     = data.aws_ssm_parameter.frontend_team_view_role.value
     }
   }
-
-  # EKS Addons
-  cluster_addons = {
-    coredns    = {
-      addon_version  = "v1.11.3-eksbuild.2"
-    }
-    kube-proxy = {
-      addon_version  = "v1.31.1-eksbuild.2"
-    }
-    amazon-cloudwatch-observability = {
-      addon_version  = "v2.2.1-eksbuild.1"
-    }
-    aws-ebs-csi-driver = {
-      addon_version  = "v1.36.0-eksbuild.1"
-    }
-    eks-pod-identity-agent = {
-      addon_version  = "v1.3.2-eksbuild.2"
-      before_compute = true
-    }
-    vpc-cni = {
-      # Specify the VPC CNI addon should be deployed before compute to ensure
-      # the addon is configured before data plane compute resources are created
-      # See README for further details
-      before_compute = true
-      addon_version  = "v1.18.5-eksbuild.1"
-      configuration_values = jsonencode({
-        env = {
-          # Reference docs https://docs.aws.amazon.com/eks/latest/userguide/cni-increase-ip-addresses.html
-          ENABLE_PREFIX_DELEGATION = "true"
-          WARM_PREFIX_TARGET       = "1"
-        },
-        enableNetworkPolicy = "true"
-      })
-    }
-  }
   node_security_group_additional_rules = {
       # Allows Control Plane Nodes to talk to Worker nodes vpc cni metrics port
       vpc_cni_metrics_traffic = {
@@ -402,5 +367,25 @@ module "vpc" {
   }
 
   tags = local.tags
+}
+
+################################################################################
+# ACK Controller Pod Identity Associations
+################################################################################
+
+# Get ACK controller IAM roles created by hub cluster
+data "aws_iam_role" "ack_controller" {
+  for_each = toset(["iam", "ec2", "eks"])
+  name     = "ack-${each.key}-controller-role-mgmt"
+}
+
+# Create pod identity associations for ACK controllers
+resource "aws_eks_pod_identity_association" "ack_controller" {
+  for_each = toset(["iam", "ec2", "eks"])
+
+  cluster_name    = local.name
+  namespace       = "ack-system"
+  service_account = "ack-${each.key}-controller"
+  role_arn        = data.aws_iam_role.ack_controller[each.key].arn
 }
 
