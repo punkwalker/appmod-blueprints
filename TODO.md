@@ -48,6 +48,7 @@
 - [ ] Rename secrets created by spoke terraform from peeks-hub-cluster/peeks-spoke-staging to peeks-workshop-peeks-spoke-staging
 - [ ] include Backstage argo-cd plugin from https://roadie.io/backstage/plugins/argo-cd/
 - [ ] validate fleet-secret chart creation, and automation of clusters registration with fleet solution
+- [ ] do we need to use a dedicated repo ? or how do I isolate things to  not commit things back ?
 
 ## Notes
 - The `configure_keycloak` function in `setup-keycloak.sh` handles the SAML integration
