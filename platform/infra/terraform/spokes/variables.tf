@@ -13,7 +13,6 @@ variable "addons" {
   description = "EKS addons"
   type        = any
   default = {
-    enable_aws_load_balancer_controller = true
     enable_metrics_server               = true
     enable_cw_prometheus                = true
     enable_kyverno                      = true
