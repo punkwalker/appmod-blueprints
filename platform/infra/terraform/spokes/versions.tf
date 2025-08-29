@@ -14,6 +14,10 @@ terraform {
       source  = "hashicorp/kubernetes"
       version = ">= 2.36.0, < 3.0.0"
     }
+    kubectl = {
+      source  = "alekc/kubectl"
+      version = ">= 2.0"
+    }
   }
 
   # Backend configuration provided via CLI parameters
