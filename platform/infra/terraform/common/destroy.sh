@@ -12,4 +12,4 @@ terraform -chdir=$SCRIPTDIR destroy -auto-approve
 destroy_output=$(terraform -chdir=$SCRIPTDIR  destroy -auto-approve 2>&1)
 
 # Delete parameter created in the bootstrap
-aws ssm delete-parameter --name GiteaExternalUrl || true
+# aws ssm delete-parameter --name GiteaExternalUrl || true
