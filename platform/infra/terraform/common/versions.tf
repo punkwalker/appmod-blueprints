@@ -16,10 +16,9 @@ terraform {
     }
   }
 
-  # ##  Used for end-to-end testing on project; update to suit your needs
-  # backend "s3" {
-  #   bucket = "terraform-state-duektsah"
-  #   region = "eu-west-1"
-  #   key    = "argocd-on-amazon-eks-workshop/codecommit"
-  # }
+  # Backend configuration provided via CLI parameters
+  backend "s3" {
+    # bucket and dynamodb_table provided via -backend-config
+    key    = "terraform.tfstate"
+  }
 }
