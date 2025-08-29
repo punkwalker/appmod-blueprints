@@ -1,5 +1,64 @@
 # AppMod Blueprints - Platform Architecture
 
+## ArgoCD IAM Role Configuration Fix
+
+### Issue
+ArgoCD in the hub cluster was using the wrong IAM role (`argocd-hub-mgmt`) instead of the common role (`peeks-workshop-gitops-argocd-hub...`) that spoke clusters trust for cross-cluster access.
+
+### Root Cause
+- **Common terraform** creates `aws_iam_role.argocd_central` role for cross-cluster access
+- **Hub terraform** was creating its own `argocd-hub-mgmt` role via `argocd_hub_pod_identity` module
+- **Spoke clusters** trust the common role, but hub ArgoCD was using the hub-specific role
+- This caused ArgoCD to fail connecting to spoke clusters with authentication errors
+
+### Solution
+Modified `/home/ec2-user/environment/platform-on-eks-workshop/platform/infra/terraform/hub/pod-identity.tf`:
+
+1. **Removed the module approach** and replaced with direct EKS Pod Identity associations
+2. **Added data source** to fetch the common ArgoCD role from SSM parameter
+3. **Created direct associations** for all ArgoCD service accounts using the common role
+
+```terraform
+# Added data source for common ArgoCD role
+data "aws_ssm_parameter" "argocd_hub_role" {
+  name = "peeks-workshop-gitops-argocd-central-role"
+}
+
+# Replaced module with direct associations
+resource "aws_eks_pod_identity_association" "argocd_controller" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-application-controller"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
+}
+
+resource "aws_eks_pod_identity_association" "argocd_server" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-server"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
+}
+
+resource "aws_eks_pod_identity_association" "argocd_repo_server" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-repo-server"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
+}
+```
+
+4. **Updated references** in `argocd.tf` and `locals.tf` to use the common role ARN
+
+### Deployment
+Use the deploy script to apply changes:
+```bash
+cd /home/ec2-user/environment/platform-on-eks-workshop/platform/infra/terraform/hub
+./deploy.sh
+```
+
+### Verification
+After deployment, ArgoCD should be able to connect to spoke clusters and sync applications successfully.
+
 ## Project Overview
 This repository contains the **Modern Engineering on AWS** platform implementation that works with the bootstrap infrastructure created by the CloudFormation stack. It provides Terraform modules, GitOps configurations, and platform services for a complete EKS-based development platform.
 

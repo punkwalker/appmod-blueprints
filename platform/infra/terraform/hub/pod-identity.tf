@@ -43,94 +43,31 @@ module "external_secrets_pod_identity" {
 }
 
 ################################################################################
-# EBS CSI EKS Access
+# ArgoCD Hub Management
 ################################################################################
-# module "aws_ebs_csi_pod_identity" {
-#   source  = "terraform-aws-modules/eks-pod-identity/aws"
-#   version = "~> 1.4.0"
+data "aws_ssm_parameter" "argocd_hub_role" {
+  name = "peeks-workshop-gitops-argocd-central-role"
+}
 
-#   name = "aws-ebs-csi"
+resource "aws_eks_pod_identity_association" "argocd_controller" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-application-controller"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
+}
 
-#   attach_aws_ebs_csi_policy = true
-#   aws_ebs_csi_kms_arns      = ["arn:aws:kms:*:*:key/*"]
+resource "aws_eks_pod_identity_association" "argocd_server" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-server"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
+}
 
-#   # Pod Identity Associations
-#   associations = {
-#     addon = {
-#       cluster_name    = local.cluster_info.cluster_name
-#       namespace       = "kube-system"
-#       service_account = "ebs-csi-controller-sa"
-#     }
-#   }
-
-#   tags = local.tags
-# }
-
-################################################################################
-# AWS ALB Ingress Controller EKS Access
-################################################################################
-# module "aws_lb_controller_pod_identity" {
-#   count   = local.aws_addons.enable_aws_load_balancer_controller || local.enable_automode ? 1 : 0
-#   source  = "terraform-aws-modules/eks-pod-identity/aws"
-#   version = "~> 1.4.0"
-
-#   name = "aws-lbc"
-
-#   attach_aws_lb_controller_policy = true
-
-
-#   # Pod Identity Associations
-#   associations = {
-#     addon = {
-#       cluster_name    = local.cluster_info.cluster_name
-#       namespace       = local.aws_load_balancer_controller.namespace
-#       service_account = local.aws_load_balancer_controller.service_account
-#     }
-#   }
-
-#   tags = local.tags
-# }
-
-################################################################################
-# Karpenter EKS Access
-################################################################################
-
-module "argocd_hub_pod_identity" {
-  source  = "terraform-aws-modules/eks-pod-identity/aws"
-  version = "~> 1.4.0"
-
-  name      = "argocd-hub-mgmt"
-  use_name_prefix = false
-
-  attach_custom_policy = true
-  policy_statements = [
-    {
-      sid       = "ArgoCD"
-      actions   = ["sts:AssumeRole", "sts:TagSession"]
-      resources = ["*"]
-    }
-  ]
-
-  # Pod Identity Associations
-  association_defaults = {
-    namespace = "argocd"
-  }
-  associations = {
-    controller = {
-      cluster_name    = local.cluster_info.cluster_name
-      service_account = "argocd-application-controller"
-    }
-    server = {
-      cluster_name    = local.cluster_info.cluster_name
-      service_account = "argocd-server"
-    }
-    repo-server = {
-      cluster_name    = local.cluster_info.cluster_name
-      service_account = "argocd-repo-server"
-    }
-  }
-
-  tags = local.tags
+resource "aws_eks_pod_identity_association" "argocd_repo_server" {
+  cluster_name    = local.cluster_info.cluster_name
+  namespace       = "argocd"
+  service_account = "argocd-repo-server"
+  role_arn        = data.aws_ssm_parameter.argocd_hub_role.value
 }
 
 

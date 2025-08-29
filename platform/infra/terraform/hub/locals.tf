@@ -136,7 +136,7 @@ locals {
     {
       argocd_namespace        = local.argocd_namespace,
       create_argocd_namespace = false,
-      argocd_controller_role_arn = module.argocd_hub_pod_identity.iam_role_arn
+      argocd_controller_role_arn = data.aws_ssm_parameter.argocd_hub_role.value
     },
     {
       addons_repo_url      = local.gitops_addons_repo_url

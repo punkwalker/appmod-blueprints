@@ -81,7 +81,7 @@ resource "kubernetes_secret" "git_secrets" {
 resource "aws_ssm_parameter" "argocd_hub_role" {
   name  = "/${local.name}/argocd-hub-role"
   type  = "String"
-  value = module.argocd_hub_pod_identity.iam_role_arn
+  value = data.aws_ssm_parameter.argocd_hub_role.value
 }
 
 # Create IDE password secret in ArgoCD namespace
