@@ -11,74 +11,7 @@ variable "secret_name_ssh_secrets" {
 }
 
 
-variable "gitops_fleet_repo_name" {
-  description = "Git repository name for addons"
-  default     = "peeks-workshop-gitops-fleet"
-}
-variable "gitops_fleet_basepath" {
-  description = "Git repository base path for addons"
-  default     = ""
-}
-variable "gitops_fleet_path" {
-  description = "Git repository path for addons"
-  default     = "bootstrap"
-}
-variable "gitops_fleet_revision" {
-  description = "Git repository revision/branch/ref for addons"
-  default     = "HEAD"
-}
-
-variable "gitops_addons_repo_name" {
-  description = "Git repository name for addons"
-  default     = "peeks-workshop-gitops-addons"
-}
-variable "gitops_addons_basepath" {
-  description = "Git repository base path for addons"
-  default     = ""
-}
-variable "gitops_addons_path" {
-  description = "Git repository path for addons"
-  default     = "bootstrap"
-}
-variable "gitops_addons_revision" {
-  description = "Git repository revision/branch/ref for addons"
-  default     = "HEAD"
-}
-
-variable "gitops_platform_repo_name" {
-  description = "Git repository name for platform"
-  default     = "peeks-workshop-gitops-platform"
-}
-variable "gitops_platform_basepath" {
-  description = "Git repository base path for platform"
-  default     = ""
-}
-variable "gitops_platform_path" {
-  description = "Git repository path for workload"
-  default     = "bootstrap"
-}
-variable "gitops_platform_revision" {
-  description = "Git repository revision/branch/ref for workload"
-  default     = "HEAD"
-}
-
-
-variable "gitops_workload_repo_name" {
-  description = "Git repository name for workload"
-  default     = "peeks-workshop-gitops-apps"
-}
-variable "gitops_workload_basepath" {
-  description = "Git repository base path for workload"
-  default     = ""
-}
-variable "gitops_workload_path" {
-  description = "Git repository path for workload"
-  default     = ""
-}
-variable "gitops_workload_revision" {
-  description = "Git repository revision/branch/ref for workload"
-  default     = "HEAD"
-}
+# Removed unused gitops repository variables and gitea_external_url
 
 variable "ssm_parameter_name_argocd_role_suffix" {
   description = "SSM parameter name for ArgoCD role"
@@ -112,17 +45,8 @@ variable "gitea_password" {
   sensitive = true
   default = ""
 }
-variable "gitea_external_url" {
-  description = "External url to access gitea"
-  type = string
-  default = ""
-}
 
-variable "gitea_repo_prefix" {
-  description = "Repo prefix"
-  type = string
-  default = "workshop-user/"
-}
+# Removed unused gitea_external_url and gitea_repo_prefix variables
 
 variable "create_github_repos" {
   description = "Create Github repos"
