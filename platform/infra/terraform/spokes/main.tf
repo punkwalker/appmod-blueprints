@@ -383,9 +383,11 @@ data "aws_iam_role" "ack_controller" {
 resource "aws_eks_pod_identity_association" "ack_controller" {
   for_each = toset(["iam", "ec2", "eks"])
 
-  cluster_name    = local.name
+  cluster_name    = module.eks.cluster_name
   namespace       = "ack-system"
   service_account = "ack-${each.key}-controller"
   role_arn        = data.aws_iam_role.ack_controller[each.key].arn
+
+  depends_on = [module.eks]
 }
 
