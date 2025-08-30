@@ -209,7 +209,7 @@ resource "helm_release" "gitlab" {
   ]
 
   name       = "gitlab"
-  chart      = "${path.module}/../../../gitops/addons/charts/gitlab"
+  chart      = "${path.module}/../../../../gitops/addons/charts/gitlab"
   timeout    = 600
   values     = [local.gitlab_values]
   create_namespace = false
