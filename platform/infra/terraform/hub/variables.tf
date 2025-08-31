@@ -209,7 +209,7 @@ variable "tenant" {
 variable "ingress_name" {
   description = "Name of the ingress controller load balancer"
   type        = string
-  default     = "hub-ingress"
+  default     = "peeks-hub-ingress"
 }
 
 variable "account_ids" {
