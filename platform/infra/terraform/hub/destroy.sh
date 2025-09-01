@@ -363,41 +363,72 @@ destroy_terraform_resources() {
 main() {
   log "Starting enhanced destroy script..."
   
+  # Track overall success/failure
+  local overall_success=true
+  
   # Pre-flight checks
-  preflight_checks
+  if ! preflight_checks; then
+    log_error "Pre-flight checks failed"
+    overall_success=false
+  fi
   
   # Backup state
   backup_terraform_state
   
   # Initialize Terraform
   if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
-    terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${TFSTATE_BUCKET_NAME}" -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}"
+    if ! terraform -chdir=$SCRIPTDIR init --upgrade \
+      -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+      -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
+      -backend-config="region=${AWS_REGION:-us-east-1}"; then
+      log_error "Terraform init failed with remote backend"
+      overall_success=false
+    fi
   else
     # Try to get backend config from SSM parameters
     BUCKET_NAME=$(aws ssm get-parameter --name tf-backend-bucket --query 'Parameter.Value' --output text 2>/dev/null || echo "")
     LOCK_TABLE=$(aws ssm get-parameter --name tf-backend-lock-table --query 'Parameter.Value' --output text 2>/dev/null || echo "")
     
     if [[ -n "$BUCKET_NAME" && -n "$LOCK_TABLE" ]]; then
-      terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${BUCKET_NAME}" -backend-config="dynamodb_table=${LOCK_TABLE}"
+      if ! terraform -chdir=$SCRIPTDIR init --upgrade \
+        -backend-config="bucket=${BUCKET_NAME}" \
+        -backend-config="dynamodb_table=${LOCK_TABLE}" \
+        -backend-config="region=${AWS_REGION:-us-east-1}"; then
+        log_error "Terraform init failed with SSM backend config"
+        overall_success=false
+      fi
     else
-      terraform -chdir=$SCRIPTDIR init --upgrade
+      if ! terraform -chdir=$SCRIPTDIR init --upgrade; then
+        log_error "Terraform init failed with local backend"
+        overall_success=false
+      fi
       echo "WARNING: Backend configuration not found in environment variables or SSM parameters."
       echo "WARNING: Terraform state will be stored locally and may be lost!"
     fi
   fi
   
   # Configure kubectl with fallback
-  configure_kubectl_with_fallback
+  if ! configure_kubectl_with_fallback; then
+    log_warning "kubectl configuration failed, but continuing with destroy"
+  fi
   
   # Clean up Kubernetes resources with fallback
-  cleanup_kubernetes_resources_with_fallback
+  if ! cleanup_kubernetes_resources_with_fallback; then
+    log_warning "Kubernetes cleanup had issues, but continuing with Terraform destroy"
+  fi
   
-  # Destroy Terraform resources
-  if destroy_terraform_resources; then
+  # Destroy Terraform resources - this is critical
+  if ! destroy_terraform_resources; then
+    log_error "Critical failure: Terraform destroy failed"
+    overall_success=false
+  fi
+  
+  # Final status check
+  if [ "$overall_success" = true ]; then
     log_success "Destroy script completed successfully"
     return 0
   else
-    log_error "Destroy script completed with errors"
+    log_error "Destroy script completed with critical errors"
     return 1
   fi
 }

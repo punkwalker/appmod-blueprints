@@ -31,7 +31,10 @@ done
 
 # Initialize Terraform
 if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
-  terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${TFSTATE_BUCKET_NAME}" -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}"
+  terraform -chdir=$SCRIPTDIR init --upgrade \
+    -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
+    -backend-config="region=${AWS_REGION:-us-east-1}"
 else
   terraform -chdir=$SCRIPTDIR init --upgrade
   echo "WARNING: TFSTATE_BUCKET_NAME and/or TFSTATE_LOCK_TABLE environment variables not set."
@@ -47,8 +50,16 @@ echo "Using AWS Account ID: $AWS_ACCOUNT_ID"
 # Apply with custom cluster name if provided
 if [ -n "$CLUSTER_NAME" ]; then
   echo "Using custom cluster name: $CLUSTER_NAME"
-  terraform -chdir=$SCRIPTDIR apply -var-file=$TF_VAR_FILE -var="cluster_name=$CLUSTER_NAME" -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve
+  if ! terraform -chdir=$SCRIPTDIR apply -var-file=$TF_VAR_FILE -var="cluster_name=$CLUSTER_NAME" -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve; then
+    echo "ERROR: Terraform apply failed for cluster $CLUSTER_NAME"
+    exit 1
+  fi
 else
   echo "Using default cluster name: peeks-hub-cluster"
-  terraform -chdir=$SCRIPTDIR apply -var-file=$TF_VAR_FILE -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve
+  if ! terraform -chdir=$SCRIPTDIR apply -var-file=$TF_VAR_FILE -var="account_ids=$AWS_ACCOUNT_ID" -auto-approve; then
+    echo "ERROR: Terraform apply failed for default cluster"
+    exit 1
+  fi
 fi
+
+echo "SUCCESS: Hub cluster deployment completed successfully"

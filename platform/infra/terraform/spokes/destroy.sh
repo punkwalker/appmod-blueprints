@@ -206,14 +206,20 @@ env=$1
 echo "Destroying $env ..."
 
 if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
-  terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${TFSTATE_BUCKET_NAME}" -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}"
+  terraform -chdir=$SCRIPTDIR init --upgrade \
+    -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
+    -backend-config="region=${AWS_REGION:-us-east-1}"
 else
   # Try to get backend config from SSM parameters
   BUCKET_NAME=$(aws ssm get-parameter --name tf-backend-bucket --query 'Parameter.Value' --output text 2>/dev/null || echo "")
   LOCK_TABLE=$(aws ssm get-parameter --name tf-backend-lock-table --query 'Parameter.Value' --output text 2>/dev/null || echo "")
   
   if [[ -n "$BUCKET_NAME" && -n "$LOCK_TABLE" ]]; then
-    terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${BUCKET_NAME}" -backend-config="dynamodb_table=${LOCK_TABLE}"
+    terraform -chdir=$SCRIPTDIR init --upgrade \
+      -backend-config="bucket=${BUCKET_NAME}" \
+      -backend-config="dynamodb_table=${LOCK_TABLE}" \
+      -backend-config="region=${AWS_REGION:-us-east-1}"
   else
     terraform -chdir=$SCRIPTDIR init --upgrade
     echo "WARNING: Backend configuration not found in environment variables or SSM parameters."
@@ -325,17 +331,27 @@ fi
 # Terraform destroy in proper order with better error handling
 echo "Starting Terraform destroy process..."
 
+# Track overall success/failure
+overall_success=true
+
 # First destroy the gitops bridge bootstrap
 echo "Destroying gitops_bridge_bootstrap_hub module..."
-terraform -chdir=$SCRIPTDIR destroy -target="module.gitops_bridge_bootstrap_hub" -auto-approve -var-file="workspaces/${env}.tfvars" || true
+if ! terraform -chdir=$SCRIPTDIR destroy -target="module.gitops_bridge_bootstrap_hub" -auto-approve -var-file="workspaces/${env}.tfvars"; then
+  echo "WARNING: Failed to destroy gitops_bridge_bootstrap_hub module, continuing..."
+fi
 
 # Then destroy the EKS addons
 echo "Destroying eks_blueprints_addons module..."
-terraform -chdir=$SCRIPTDIR destroy -target="module.eks_blueprints_addons" -auto-approve -var-file="workspaces/${env}.tfvars" || true
+if ! terraform -chdir=$SCRIPTDIR destroy -target="module.eks_blueprints_addons" -auto-approve -var-file="workspaces/${env}.tfvars"; then
+  echo "WARNING: Failed to destroy eks_blueprints_addons module, continuing..."
+fi
 
 # Then destroy the EKS cluster
 echo "Destroying eks module..."
-terraform -chdir=$SCRIPTDIR destroy -target="module.eks" -auto-approve -var-file="workspaces/${env}.tfvars" || true
+if ! terraform -chdir=$SCRIPTDIR destroy -target="module.eks" -auto-approve -var-file="workspaces/${env}.tfvars"; then
+  echo "ERROR: Failed to destroy EKS cluster - this is critical"
+  overall_success=false
+fi
 
 # Force delete VPC if requested
 if [[ "${FORCE_DELETE_VPC:-false}" == "true" ]]; then
@@ -345,10 +361,23 @@ fi
 
 # Destroy VPC
 echo "Destroying vpc module..."
-terraform -chdir=$SCRIPTDIR destroy -target="module.vpc" -auto-approve -var-file="workspaces/${env}.tfvars" || true
+if ! terraform -chdir=$SCRIPTDIR destroy -target="module.vpc" -auto-approve -var-file="workspaces/${env}.tfvars"; then
+  echo "ERROR: Failed to destroy VPC - this is critical"
+  overall_success=false
+fi
 
 # Final destroy to clean up any remaining resources
 echo "Running final terraform destroy..."
-terraform -chdir=$SCRIPTDIR destroy -auto-approve -var-file="workspaces/${env}.tfvars"
+if ! terraform -chdir=$SCRIPTDIR destroy -auto-approve -var-file="workspaces/${env}.tfvars"; then
+  echo "ERROR: Final terraform destroy failed - this is critical"
+  overall_success=false
+fi
 
-echo "Destroy script completed for $env environment"
+# Check final status and exit appropriately
+if [ "$overall_success" = true ]; then
+  echo "SUCCESS: Destroy script completed successfully for $env environment"
+  exit 0
+else
+  echo "ERROR: Destroy script completed with critical errors for $env environment"
+  exit 1
+fi
