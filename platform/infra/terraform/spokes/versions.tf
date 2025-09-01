@@ -19,6 +19,6 @@ terraform {
   # Backend configuration provided via CLI parameters
   backend "s3" {
     # bucket and dynamodb_table provided via -backend-config
-    key = "spokes/terraform.tfstate"
+    key = "spokes/${terraform.workspace}/terraform.tfstate"
   }
 }
