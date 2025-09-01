@@ -5,7 +5,7 @@ set -ex
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Use a single variable for app name, repository, service, and cluster
-APP_NAME="backstage"
+APP_NAME="peeks-backstage"
 
 # Check if APP_PATH was provided as the first parameter
 APP_PATH="$1"
