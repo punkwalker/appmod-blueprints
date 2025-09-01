@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Disable Terraform color output to prevent ANSI escape sequences
+export TF_CLI_ARGS="-no-color"
 #DEBUG=1 $BASE_DIR/platform/infra/terraform/hub/deploy.sh --cluster-name ${CLUSTER_NAME}
 
 set -euo pipefail

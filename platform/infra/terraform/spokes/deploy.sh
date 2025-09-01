@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# Disable Terraform color output to prevent ANSI escape sequences
+export TF_CLI_ARGS="-no-color"
 #usage:
 #DEBUG=1 $BASE_DIR/platform/infra/terraform/spokes/deploy.sh ${SPOKE} --cluster-name-prefix ${CLUSTER_NAME_PREFIX}
 

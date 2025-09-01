@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
+# Disable Terraform color output to prevent ANSI escape sequences
+export TF_CLI_ARGS="-no-color"
 set -uo pipefail
+
+# Disable Terraform color output to prevent ANSI escape sequences
+export TF_CLI_ARGS="-no-color"
 
 SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOTDIR="$(cd ${SCRIPTDIR}/../..; pwd )"
