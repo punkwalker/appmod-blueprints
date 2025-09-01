@@ -46,6 +46,12 @@ variable "amazon_managed_prometheus_suffix" {
   default     = "amp-hub"
 }
 
+variable "ingress_name" {
+  description = "Name for the ingress load balancer"
+  type        = string
+  default     = ""
+}
+
 variable "backend_team_view_role_suffix" {
   description = "SSM parameter name for peeks Workshop Team Backend IAM Role"
   type        = string
