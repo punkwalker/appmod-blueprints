@@ -79,6 +79,10 @@ resource "kubernetes_secret" "git_secrets" {
 
 # Creating parameter for argocd hub role for the spoke clusters to read
 resource "aws_ssm_parameter" "argocd_hub_role" {
+  depends_on = [
+    aws_iam_role.ack_controller,
+    aws_iam_role.kargo_controller_role
+  ]
   name  = "/${local.name}/argocd-hub-role"
   type  = "String"
   value = data.aws_ssm_parameter.argocd_hub_role.value
