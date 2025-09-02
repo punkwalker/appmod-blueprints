@@ -1,19 +1,19 @@
 externalSecret:
   enabled: true
-  clusterName: peeks-spoke-staging
+  clusterName: peeks-spoke-dev
   secretStoreRefKind: ClusterSecretStore
   secretStoreRefName: aws-secrets-manager
-  secretManagerSecretName: peeks-hub-cluster/peeks-spoke-staging
+  secretManagerSecretName: peeks-hub-cluster/peeks-spoke-dev
   server: remote
   
   annotations:
-    environment: staging
+    environment: dev
     tenant: tenant1
     
   labels:
-    environment: staging
+    environment: dev
     tenant: tenant1
-    fleet_member: staging
+    fleet_member: dev
     enable_cert_manager: "true"
     enable_external_secrets: "true"
     enable_ingress_nginx: "true"

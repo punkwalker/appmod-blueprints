@@ -19,7 +19,7 @@ locals {
   gitlab_nlb_domain_name    = "${data.aws_lb.gitlab_nlb.dns_name}"
   gitlab_domain_name        = aws_cloudfront_distribution.gitlab.domain_name
   git_hostname              = var.git_hostname == "" ? "${local.gitlab_domain_name}" : var.git_hostname
-  backstage_image           = var.backstage_image == "" ? "${data.aws_caller_identity.current.account_id}.dkr.ecr.${local.region}.amazonaws.com/backstage:latest" : var.backstage_image
+  backstage_image           = var.backstage_image == "" ? "${data.aws_caller_identity.current.account_id}.dkr.ecr.${local.region}.amazonaws.com/peeks-backstage:latest" : var.backstage_image
   gitops_addons_repo_url    = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_addons_repo_name}.git"
   gitops_fleet_repo_url     = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_fleet_repo_name}.git"
   gitops_workload_repo_url  = "https://${local.git_hostname}/${var.git_org_name}/${var.gitops_workload_repo_name}.git"
@@ -181,6 +181,7 @@ locals {
     {
       ingress_security_groups = local.ingress_security_groups
       ingress_domain_name = local.ingress_domain_name
+      ingress_name = var.ingress_name
       gitlab_security_groups = local.gitlab_security_groups
       gitlab_domain_name = local.gitlab_domain_name
       git_username = data.external.env_vars.result.GIT_USERNAME

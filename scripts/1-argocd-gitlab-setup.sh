@@ -194,7 +194,7 @@ kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argocd-repo-ser
 sleep 5
 
 print_step "Creating Amazon Elastic Container Repository (Amazon ECR) for Backstage image"
-aws ecr create-repository --repository-name backstage --region $AWS_REGION || true
+aws ecr create-repository --repository-name peeks-backstage --region $AWS_REGION || true
 
 print_step "Starting Backstage image build in parallel"
 print_info "Building Backstage image in background..."

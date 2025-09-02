@@ -98,17 +98,26 @@ done
 if [ "$DEPLOY_DB" = true ]; then
   echo "Deploying database for $env environment..."
   
-  terraform -chdir=${SCRIPTDIR}/db init -reconfigure \
+  if ! terraform -chdir=${SCRIPTDIR}/db init -reconfigure \
     -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
     -backend-config="key=spokes/db/${env}/terraform.tfstate" \
-    -backend-config="region=${AWS_REGION}"
+    -backend-config="region=${AWS_REGION}"; then
+    echo "ERROR: Database terraform init failed"
+    exit 1
+  fi
   
   terraform -chdir=${SCRIPTDIR}/db workspace select -or-create $env
   
   if [ -n "$CLUSTER_NAME_PREFIX" ]; then
-    terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" -auto-approve
+    if ! terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" -auto-approve; then
+      echo "ERROR: Database deployment failed with custom cluster name prefix"
+      exit 1
+    fi
   else
-    terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -auto-approve
+    if ! terraform -chdir=${SCRIPTDIR}/db apply -var-file="../workspaces/${env}.tfvars" -auto-approve; then
+      echo "ERROR: Database deployment failed"
+      exit 1
+    fi
   fi
   
   echo "Database deployment completed for $env"
@@ -118,28 +127,47 @@ fi
 echo "Deploying EKS cluster for $env environment..."
 
 if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
-  terraform -chdir=$SCRIPTDIR init --upgrade -backend-config="bucket=${TFSTATE_BUCKET_NAME}" -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}"
+  if ! terraform -chdir=$SCRIPTDIR init --upgrade \
+    -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="key=spokes/${env}/terraform.tfstate" \
+    -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
+    -backend-config="region=${AWS_REGION}"; then
+    echo "ERROR: Terraform init failed"
+    exit 1
+  fi
 else
-  terraform -chdir=$SCRIPTDIR init --upgrade
+  if ! terraform -chdir=$SCRIPTDIR init --upgrade; then
+    echo "ERROR: Terraform init failed"
+    exit 1
+  fi
   echo "WARNING: TFSTATE_BUCKET_NAME and/or TFSTATE_LOCK_TABLE environment variables not set."
   echo "WARNING: Terraform state will be stored locally and may be lost!"
 fi
+
 terraform -chdir=$SCRIPTDIR workspace select -or-create $env
 
 # Apply with custom cluster name prefix if provided
 if [ -n "$CLUSTER_NAME_PREFIX" ]; then
   echo "Using custom cluster name prefix: $CLUSTER_NAME_PREFIX"
-  terraform -chdir=$SCRIPTDIR apply \
+  if ! terraform -chdir=$SCRIPTDIR apply \
     -var-file="workspaces/${env}.tfvars" \
     -var="cluster_name_prefix=$CLUSTER_NAME_PREFIX" \
     -var="git_hostname=$GITLAB_DOMAIN" \
     -var="gitlab_domain_name=$GITLAB_DOMAIN" \
-    -auto-approve
+    -auto-approve; then
+    echo "ERROR: EKS cluster deployment failed with custom cluster name prefix"
+    exit 1
+  fi
 else
   echo "Using default cluster name prefix: peeks-spoke"
-  terraform -chdir=$SCRIPTDIR apply \
+  if ! terraform -chdir=$SCRIPTDIR apply \
     -var-file="workspaces/${env}.tfvars" \
     -var="git_hostname=$GITLAB_DOMAIN" \
     -var="gitlab_domain_name=$GITLAB_DOMAIN" \
-    -auto-approve
+    -auto-approve; then
+    echo "ERROR: EKS cluster deployment failed"
+    exit 1
+  fi
 fi
+
+echo "SUCCESS: Spoke cluster deployment completed successfully for $env"
