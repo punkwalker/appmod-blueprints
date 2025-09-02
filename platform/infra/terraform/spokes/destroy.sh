@@ -208,6 +208,7 @@ echo "Destroying $env ..."
 if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
   terraform -chdir=$SCRIPTDIR init --upgrade \
     -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="key=spokes/${env}/terraform.tfstate" \
     -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
     -backend-config="region=${AWS_REGION:-us-east-1}"
 else
@@ -218,6 +219,7 @@ else
   if [[ -n "$BUCKET_NAME" && -n "$LOCK_TABLE" ]]; then
     terraform -chdir=$SCRIPTDIR init --upgrade \
       -backend-config="bucket=${BUCKET_NAME}" \
+      -backend-config="key=spokes/${env}/terraform.tfstate" \
       -backend-config="dynamodb_table=${LOCK_TABLE}" \
       -backend-config="region=${AWS_REGION:-us-east-1}"
   else
