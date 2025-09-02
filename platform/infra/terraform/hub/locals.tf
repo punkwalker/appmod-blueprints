@@ -181,6 +181,7 @@ locals {
     {
       ingress_security_groups = local.ingress_security_groups
       ingress_domain_name = local.ingress_domain_name
+      ingress_name = var.ingress_name
       gitlab_security_groups = local.gitlab_security_groups
       gitlab_domain_name = local.gitlab_domain_name
       git_username = data.external.env_vars.result.GIT_USERNAME
