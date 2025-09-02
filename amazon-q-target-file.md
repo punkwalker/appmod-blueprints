@@ -1,5 +1,112 @@
 # AppMod Blueprints - Platform Architecture
 
+## Bootstrap Script Improvements (2025-09-02)
+
+### Enhanced ArgoCD Health Monitoring
+The `scripts/0-bootstrap.sh` script has been improved with comprehensive health monitoring and waiting mechanisms:
+
+#### New Features
+- **ArgoCD Health Monitoring**: `wait_for_argocd_health()` monitors all applications for health status
+- **Application Sync & Wait**: `sync_and_wait_app()` manages individual application synchronization
+- **Intelligent Waiting**: After ArgoCD setup, waits for critical applications to be healthy
+- **Status Reporting**: Real-time status display during deployment with color-coded indicators
+- **Timeout Management**: Configurable timeouts (10min overall, 5min per app)
+- **Graceful Degradation**: Continues deployment even if some apps are still syncing
+
+#### Configuration
+```bash
+ARGOCD_WAIT_TIMEOUT=600      # 10 minutes overall timeout
+ARGOCD_CHECK_INTERVAL=30     # 30 seconds between checks
+```
+
+#### Deployment Flow
+1. **1-argocd-gitlab-setup.sh** - Sets up ArgoCD and GitLab integration
+2. **Wait 30s** - Initial deployment stabilization
+3. **Sync bootstrap app** - Forces sync of bootstrap ApplicationSet (5min timeout)
+4. **Sync cluster-addons app** - Forces sync of cluster-addons ApplicationSet (5min timeout)  
+5. **Monitor all apps** - Waits for all ArgoCD applications to be healthy (10min timeout)
+6. **Final status report** - Shows ✓/⚠/✗ status for all applications
+7. **2-bootstrap-accounts.sh** - Account setup (only after ArgoCD is healthy)
+8. **6-tools-urls.sh** - Generate access URLs
+
+### GitOps Configuration Fixes
+
+#### Fleet-Secrets ApplicationSet Fix
+**Issue**: The `fleet-secrets` ApplicationSet was using incorrect GitLab URL causing authentication failures.
+
+**Solution**: Updated `gitops/fleet/bootstrap/fleet-secrets.yaml` to use correct GitLab URL:
+```yaml
+# Fixed URL from d1vvjck0a1cre3.cloudfront.net to d3lsxhpwx29bst.cloudfront.net
+repoURL: https://d3lsxhpwx29bst.cloudfront.net/user1/platform-on-eks-workshop.git
+```
+
+#### Ingress Name Annotation Fix
+**Issue**: The `ingress-nginx` ApplicationSet template expected `{{.metadata.annotations.ingress_name}}` but this annotation was missing from the hub cluster secret.
+
+**Solution**: 
+1. **Immediate fix**: Added annotation to cluster secret:
+   ```bash
+   kubectl annotate secret peeks-hub-cluster -n argocd ingress_name="peeks-hub-ingress-nginx"
+   ```
+
+2. **Permanent fix**: Updated `platform/infra/terraform/hub/locals.tf`:
+   ```terraform
+   addons_metadata = merge(
+     # ... other metadata ...
+     {
+       ingress_name = var.ingress_name  # Added this line
+       ingress_domain_name = local.ingress_domain_name
+       # ... rest of config ...
+     }
+   )
+   ```
+
+#### Staging to Dev Rename
+**Issue**: Fleet configuration still referenced "staging" environment after cluster rename.
+
+**Solution**: Renamed and updated fleet member configuration:
+```bash
+# Renamed directory
+mv gitops/fleet/members/fleet-spoke-staging gitops/fleet/members/fleet-spoke-dev
+
+# Updated values.yaml
+clusterName: peeks-spoke-dev
+environment: dev
+fleet_member: dev
+secretManagerSecretName: peeks-hub-cluster/peeks-spoke-dev
+```
+
+### Deployment Dependencies
+The bootstrap process now has proper dependency management:
+
+```
+1-argocd-gitlab-setup.sh
+├── ArgoCD installation
+├── GitLab integration  
+├── Repository secrets setup
+└── Wait for ArgoCD health ✓
+    ├── bootstrap ApplicationSet (Synced/Healthy)
+    ├── cluster-addons ApplicationSet (Synced/Healthy)  
+    ├── fleet-secrets ApplicationSet (Synced/Healthy)
+    └── All other applications (Monitored)
+        ↓
+2-bootstrap-accounts.sh (Only runs after ArgoCD is healthy)
+        ↓  
+6-tools-urls.sh (Generates access URLs)
+```
+
+### Status Indicators
+The improved script provides clear status feedback:
+- ✅ **Green ✓**: Application is Synced and Healthy
+- ⚠️ **Yellow ⚠**: Application is Healthy but OutOfSync  
+- ❌ **Red ✗**: Application is Degraded or Failed
+
+### Error Handling
+- **Retry Logic**: Each script retries up to 3 times with 30s delays
+- **Timeout Management**: Prevents infinite waiting with configurable timeouts
+- **Graceful Degradation**: Continues deployment even if some applications need more time
+- **Detailed Logging**: Color-coded status messages with timestamps
+
 ## ArgoCD IAM Role Configuration Fix
 
 ### Issue
