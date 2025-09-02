@@ -129,6 +129,7 @@ echo "Deploying EKS cluster for $env environment..."
 if [[ -n "${TFSTATE_BUCKET_NAME:-}" && -n "${TFSTATE_LOCK_TABLE:-}" ]]; then
   if ! terraform -chdir=$SCRIPTDIR init --upgrade \
     -backend-config="bucket=${TFSTATE_BUCKET_NAME}" \
+    -backend-config="key=spokes/${env}/terraform.tfstate" \
     -backend-config="dynamodb_table=${TFSTATE_LOCK_TABLE}" \
     -backend-config="region=${AWS_REGION}"; then
     echo "ERROR: Terraform init failed"
