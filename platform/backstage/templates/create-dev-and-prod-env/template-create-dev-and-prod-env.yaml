@@ -14,7 +14,7 @@ metadata:
 
     **Option 2: Manual command**
     ```bash
-    curl -X POST "https://d1vvjck0a1cre3.cloudfront.net/api/v4/projects" \
+    curl -X POST "$GITLABURL/api/v4/projects" \
       -H "PRIVATE-TOKEN: $GITLABPW" \
       -H "Content-Type: application/json" \
       -d '{"name":"${{ parameters.name }}","path":"${{ parameters.name }}","description":"Dev and Prod environment","visibility":"private","initialize_with_readme":true}'
