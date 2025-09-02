@@ -418,14 +418,41 @@ AWS Secrets Manager → External Secrets Operator → Kubernetes Secrets → App
 
 ## Deployment Process
 
+> **⚠️ IMPORTANT: Always use deployment scripts, never run terraform commands directly**
+>
+> Each Terraform stack (common, hub, spokes) has dedicated `deploy.sh` and `destroy.sh` scripts that handle:
+> - Proper environment variable setup
+> - Backend configuration and initialization  
+> - State management and locking
+> - Error handling and cleanup
+> - Workspace management for spokes
+>
+> **✅ Correct usage:**
+> ```bash
+> # Deploy hub cluster
+> cd platform/infra/terraform/hub && ./deploy.sh
+> 
+> # Deploy spoke cluster  
+> cd platform/infra/terraform/spokes && ./deploy.sh dev
+> 
+> # Destroy resources
+> cd platform/infra/terraform/hub && ./destroy.sh
+> ```
+>
+> **❌ Never use direct terraform commands:**
+> ```bash
+> # DON'T DO THIS - bypasses proper setup
+> terraform init
+> terraform apply
+> ```
+
 ### Phase 1: Common Infrastructure
 Executed by CodeBuild from bootstrap infrastructure:
 
 ```bash
-# Deploy foundational infrastructure
-terraform init
-terraform plan -var-file="common.tfvars"
-terraform apply
+# Use the deployment script (handles init, plan, apply)
+cd platform/infra/terraform/common
+./deploy.sh
 ```
 
 **Creates**:
@@ -439,10 +466,9 @@ terraform apply
 Deploys platform services to the hub cluster:
 
 ```bash
-# Deploy platform services
-terraform init
-terraform plan -var-file="hub.tfvars"
-terraform apply
+# Use the deployment script (handles init, plan, apply)
+cd platform/infra/terraform/hub
+./deploy.sh
 ```
 
 **Creates**:
@@ -456,10 +482,9 @@ terraform apply
 Deploys application environments:
 
 ```bash
-# Deploy workload clusters
-terraform init
-terraform plan -var-file="spokes.tfvars"
-terraform apply
+# Use the deployment script with environment parameter
+cd platform/infra/terraform/spokes
+./deploy.sh dev
 ```
 
 **Creates**:
