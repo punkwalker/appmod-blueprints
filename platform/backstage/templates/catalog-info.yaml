@@ -37,6 +37,7 @@ spec:
   owner: guest
   gitlab_hostname: '{{ values.gitlabDomain }}'
   argocd_hostname: '{{ values.argocdDomain }}'
-  gituser: '{{ values.gitUsername }}'
-  aws_region: '{{ values.awsRegion }}'
-  aws_account_id: '{{ values.awsAccountId }}'
+  gituser: 'user1'
+  aws_region: 'us-east-1'
+  aws_account_id: '586794472760'
+  hostname: d3v533dlx9amf1.cloudfront.net
