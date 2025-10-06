@@ -305,7 +305,8 @@ update_backstage_defaults() {
   print_step "Updating catalog-info.yaml with environment-specific values"
 
   yq -i '
-    (select(.metadata.name == "system-info").spec.hostname) = "'$GITLAB_DOMAIN'" |
+    (select(.metadata.name == "system-info").spec.gitlab_hostname) = "'$GITLAB_DOMAIN'" |
+    (select(.metadata.name == "system-info").spec.argocd_hostname) = "'$GITLAB_DOMAIN'" |
     (select(.metadata.name == "system-info").spec.gituser) = "'$GIT_USERNAME'" |
     (select(.metadata.name == "system-info").spec.aws_region) = "'$AWS_REGION'" |
     (select(.metadata.name == "system-info").spec.aws_account_id) = "'$AWS_ACCOUNT_ID'"
