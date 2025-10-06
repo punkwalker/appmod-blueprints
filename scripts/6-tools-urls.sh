@@ -64,7 +64,6 @@ if [ -z "$USER_PASSWORD" ]; then
 fi
 set -x
 update_workshop_var "USER_PASSWORD" "$USER_PASSWORD"
-update_workshop_var "WORKSHOP_CLUSTERS" "true"
 update_workshop_var "GITLAB_DOMAIN" "$GITLAB_DOMAIN"
 update_workshop_var "ARGOCD_DOMAIN" "$ARGOCD_DOMAIN"
 set +x
