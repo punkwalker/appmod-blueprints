@@ -99,3 +99,6 @@ update_workshop_var "KEYCLOAKADMINPASSWORD" "$KEYCLOAK_ADMIN_PASSWORD"
 update_workshop_var "USER_PASSWORD" "$USER_PASSWORD"
 update_workshop_var "GITLAB_DOMAIN" "$(echo $GITLAB_URL | sed 's|https://||')"
 update_workshop_var "ARGOCD_DOMAIN" "$DOMAIN_NAME"
+
+# Update Backstage catalog-info.yaml with actual values
+update_backstage_defaults

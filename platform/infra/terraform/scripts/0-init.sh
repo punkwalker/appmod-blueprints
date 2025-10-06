@@ -63,7 +63,7 @@ main() {
         show_final_status
         exit 1
     fi
-    
+
 
     # Initialize GitLab configuration
     bash "$SCRIPT_DIR/2-gitlab-init.sh"
