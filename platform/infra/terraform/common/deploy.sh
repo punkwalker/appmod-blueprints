@@ -20,7 +20,7 @@ export WORKSHOP_CLUSTERS=${WORKSHOP_CLUSTERS:-false}
 main() {
   log "Starting bootstrap stack deployment..."
 
-  if [[ -z "${USER1_PASSWORD:-}" ]]; then
+  if [[ -z "${USER1_PASSWORD:-${USER_PASSWORD:-}}" ]]; then
     log_error "USER1_PASSWORD environment variable is required"
     exit 1
   fi
@@ -64,7 +64,6 @@ main() {
     fi
 
     export GITLAB_DOMAIN=$(terraform -chdir=$DEPLOY_SCRIPTDIR/gitlab_infra output -raw gitlab_domain_name)
-    update_workshop_var "GITLAB_DOMAIN" "$GITLAB_DOMAIN"
     GITLAB_SG_ID=$(terraform -chdir=$DEPLOY_SCRIPTDIR/gitlab_infra output -raw gitlab_security_groups)
 
     # Create spoke cluster secret values
@@ -107,7 +106,6 @@ main() {
   
   # Get ArgoCD domain from Terraform output
   export ARGOCD_DOMAIN=$(terraform -chdir=$DEPLOY_SCRIPTDIR output -raw ingress_domain_name)
-  update_workshop_var "ARGOCD_DOMAIN" "$ARGOCD_DOMAIN"
   
   # Update backstage default values now that both domains are available
   update_backstage_defaults
