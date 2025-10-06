@@ -80,7 +80,7 @@ datasources:
     enabled: false
     name: cloudwatch
     type: cloudwatch
-    region: us-west-2
+    #region: us-west-2 # TODO should be dynamic
 
 # External secrets configuration
 externalSecrets:

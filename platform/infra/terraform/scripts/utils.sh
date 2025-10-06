@@ -17,7 +17,7 @@ export RESOURCE_PREFIX="${RESOURCE_PREFIX:-peeks}"
 export GIT_USERNAME=${GIT_USERNAME:-user1}
 export CONFIG_FILE=${CONFIG_FILE:-"${GIT_ROOT_PATH}/platform/infra/terraform/hub-config.yaml"}
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export AWS_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-us-east-1}}"
+export AWS_REGION="${AWS_DEFAULT_REGION:-${AWS_REGION:-us-west-2}}"
 export CLUSTER_NAMES=($(yq eval '.clusters[].name' "$CONFIG_FILE"))
 
 # Logging functions
