@@ -67,9 +67,6 @@ main() {
     update_workshop_var "GITLAB_DOMAIN" "$GITLAB_DOMAIN"
     GITLAB_SG_ID=$(terraform -chdir=$DEPLOY_SCRIPTDIR/gitlab_infra output -raw gitlab_security_groups)
 
-    # Update backstage default values
-    update_backstage_defaults
-
     # Create spoke cluster secret values
     create_spoke_cluster_secret_values
     
@@ -111,6 +108,9 @@ main() {
   # Get ArgoCD domain from Terraform output
   export ARGOCD_DOMAIN=$(terraform -chdir=$DEPLOY_SCRIPTDIR output -raw ingress_domain_name)
   update_workshop_var "ARGOCD_DOMAIN" "$ARGOCD_DOMAIN"
+  
+  # Update backstage default values now that both domains are available
+  update_backstage_defaults
   
   log_success "Cootstrap stack deployment completed successfully"
 }
