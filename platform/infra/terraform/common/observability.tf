@@ -72,149 +72,150 @@ module "managed_grafana" {
 ################################################################################
 # EKS Monitoring with Terraform Observability Accelerator
 ################################################################################
+# COMMENTED OUT - Temporarily disabled due to resource conflicts
 # For spoek-dev cluster
 
-# To ensure the CRD is installed before terraform-aws-observability-accelerator is deployed
-data "kubernetes_resource" "spoke_dev_flux_crd" {
-  depends_on = [module.gitops_bridge_bootstrap]
-  provider = kubernetes.spoke1
-  
-  api_version = "apiextensions.k8s.io/v1"
-  kind        = "CustomResourceDefinition"
+# # To ensure the CRD is installed before terraform-aws-observability-accelerator is deployed
+# data "kubernetes_resource" "spoke_dev_flux_crd" {
+#   depends_on = [module.gitops_bridge_bootstrap]
+#   provider = kubernetes.spoke1
+#   
+#   api_version = "apiextensions.k8s.io/v1"
+#   kind        = "CustomResourceDefinition"
 
-  metadata {
-    name      = "kustomizations.kustomize.toolkit.fluxcd.io"
-  }
-}
+#   metadata {
+#     name      = "kustomizations.kustomize.toolkit.fluxcd.io"
+#   }
+# }
 
-module "eks_monitoring_spoke_dev" {
-  depends_on = [
-    module.gitops_bridge_bootstrap,
-    data.kubernetes_resource.spoke_dev_flux_crd, # Add dependency on CRD availibility
-    ]
+# module "eks_monitoring_spoke_dev" {
+#   depends_on = [
+#     module.gitops_bridge_bootstrap,
+#     data.kubernetes_resource.spoke_dev_flux_crd, # Add dependency on CRD availibility
+#     ]
     
-  source                 = "github.com/aws-observability/terraform-aws-observability-accelerator//modules/eks-monitoring?ref=v2.13.0"
-  eks_cluster_id         = data.aws_eks_cluster.clusters["spoke1"].id
+#   source                 = "github.com/aws-observability/terraform-aws-observability-accelerator//modules/eks-monitoring?ref=v2.13.0"
+#   eks_cluster_id         = data.aws_eks_cluster.clusters["spoke1"].id
   
-  providers = {
-    kubectl = kubectl.spoke1
-    helm = helm.spoke1
-  }
+#   providers = {
+#     kubectl = kubectl.spoke1
+#     helm = helm.spoke1
+#   }
 
-  enable_amazon_eks_adot = true
-  enable_cert_manager    = false
-  enable_java            = true
-  enable_nginx           = true
-  enable_custom_metrics  = true
+#   enable_amazon_eks_adot = true
+#   enable_cert_manager    = false
+#   enable_java            = true
+#   enable_nginx           = true
+#   enable_custom_metrics  = true
 
-  enable_dashboards       = true
-  enable_external_secrets = false
-  enable_fluxcd           = false
-  enable_alerting_rules   = true
-  enable_recording_rules  = true
+#   enable_dashboards       = true
+#   enable_external_secrets = false
+#   enable_fluxcd           = false
+#   enable_alerting_rules   = true
+#   enable_recording_rules  = true
 
-  enable_apiserver_monitoring  = true
-  enable_adotcollector_metrics = true
+#   enable_apiserver_monitoring  = true
+#   enable_adotcollector_metrics = true
 
-  grafana_api_key = module.managed_grafana.workspace_api_keys["operator"].key
-  grafana_url     = module.managed_grafana.workspace_endpoint
+#   grafana_api_key = module.managed_grafana.workspace_api_keys["operator"].key
+#   grafana_url     = module.managed_grafana.workspace_endpoint
 
-  # prevents the module to create a workspace
-  enable_managed_prometheus = false
+#   # prevents the module to create a workspace
+#   enable_managed_prometheus = false
 
-  managed_prometheus_workspace_id       = module.managed_service_prometheus.workspace_id
-  managed_prometheus_workspace_endpoint = module.managed_service_prometheus.workspace_prometheus_endpoint
-  managed_prometheus_workspace_region   = local.hub_cluster.region
+#   managed_prometheus_workspace_id       = module.managed_service_prometheus.workspace_id
+#   managed_prometheus_workspace_endpoint = module.managed_service_prometheus.workspace_prometheus_endpoint
+#   managed_prometheus_workspace_region   = local.hub_cluster.region
 
-  prometheus_config = {
-    global_scrape_interval = "60s"
-    global_scrape_timeout  = "15s"
-    scrape_sample_limit    = 2000
-  }
+#   prometheus_config = {
+#     global_scrape_interval = "60s"
+#     global_scrape_timeout  = "15s"
+#     scrape_sample_limit    = 2000
+#   }
 
-  custom_metrics_config = {
-    polyglot_app_config = {
-      enableBasicAuth       = false
-      path                  = "/metrics"
-      basicAuthUsername     = "username"
-      basicAuthPassword     = "password"
-      ports                 = ".*:(8080)$"
-      droppedSeriesPrefixes = "(unspecified.*)$"
-    }
-  }
-}
+#   custom_metrics_config = {
+#     polyglot_app_config = {
+#       enableBasicAuth       = false
+#       path                  = "/metrics"
+#       basicAuthUsername     = "username"
+#       basicAuthPassword     = "password"
+#       ports                 = ".*:(8080)$"
+#       droppedSeriesPrefixes = "(unspecified.*)$"
+#     }
+#   }
+# }
 
-# For spoek-prod cluster
+# # For spoek-prod cluster
 
-# To ensure the CRD is installed before terraform-aws-observability-accelerator is deployed
-data "kubernetes_resource" "spoke_prod_flux_crd" {
-  depends_on = [module.gitops_bridge_bootstrap]
-  provider = kubernetes.spoke2
+# # To ensure the CRD is installed before terraform-aws-observability-accelerator is deployed
+# data "kubernetes_resource" "spoke_prod_flux_crd" {
+#   depends_on = [module.gitops_bridge_bootstrap]
+#   provider = kubernetes.spoke2
   
-  api_version = "apiextensions.k8s.io/v1"
-  kind        = "CustomResourceDefinition"
+#   api_version = "apiextensions.k8s.io/v1"
+#   kind        = "CustomResourceDefinition"
 
-  metadata {
-    name      = "kustomizations.kustomize.toolkit.fluxcd.io"
-  }
-}
-module "eks_monitoring_spoke_prod" {
-  depends_on = [
-    module.gitops_bridge_bootstrap,
-    data.kubernetes_resource.spoke_prod_flux_crd, # Add dependency on CRD availibility
-   ]
+#   metadata {
+#     name      = "kustomizations.kustomize.toolkit.fluxcd.io"
+#   }
+# }
+# module "eks_monitoring_spoke_prod" {
+#   depends_on = [
+#     module.gitops_bridge_bootstrap,
+#     data.kubernetes_resource.spoke_prod_flux_crd, # Add dependency on CRD availibility
+#    ]
 
-  source                 = "github.com/aws-observability/terraform-aws-observability-accelerator//modules/eks-monitoring?ref=v2.13.0"
-  eks_cluster_id         = data.aws_eks_cluster.clusters["spoke2"].id
+#   source                 = "github.com/aws-observability/terraform-aws-observability-accelerator//modules/eks-monitoring?ref=v2.13.0"
+#   eks_cluster_id         = data.aws_eks_cluster.clusters["spoke2"].id
   
-  providers = {
-    kubectl = kubectl.spoke2
-    helm = helm.spoke2
-  }
+#   providers = {
+#     kubectl = kubectl.spoke2
+#     helm = helm.spoke2
+#   }
 
-  enable_amazon_eks_adot = true
-  enable_cert_manager    = false
-  enable_java            = true
-  enable_nginx           = true
-  enable_custom_metrics  = true
+#   enable_amazon_eks_adot = true
+#   enable_cert_manager    = false
+#   enable_java            = true
+#   enable_nginx           = true
+#   enable_custom_metrics  = true
 
-  # Since the following were enabled in conjunction with the set up of the
-  # spoke-dev EKS cluster, we will skip them with the spoke-prod EKS cluster
-  enable_dashboards       = false
-  enable_external_secrets = false
-  enable_fluxcd           = false
-  enable_alerting_rules   = false
-  enable_recording_rules  = false
+#   # Since the following were enabled in conjunction with the set up of the
+#   # spoke-dev EKS cluster, we will skip them with the spoke-prod EKS cluster
+#   enable_dashboards       = false
+#   enable_external_secrets = false
+#   enable_fluxcd           = false
+#   enable_alerting_rules   = false
+#   enable_recording_rules  = false
 
-  enable_apiserver_monitoring  = false
-  enable_adotcollector_metrics = false
+#   enable_apiserver_monitoring  = false
+#   enable_adotcollector_metrics = false
 
-  # grafana_api_key = module.managed_grafana.workspace_api_keys["operator"].key
-  # grafana_url     = module.managed_grafana.workspace_endpoint
+#   # grafana_api_key = module.managed_grafana.workspace_api_keys["operator"].key
+#   # grafana_url     = module.managed_grafana.workspace_endpoint
 
-  enable_managed_prometheus = false
+#   enable_managed_prometheus = false
 
-  managed_prometheus_workspace_id       = module.managed_service_prometheus.workspace_id
-  managed_prometheus_workspace_endpoint = module.managed_service_prometheus.workspace_prometheus_endpoint
-  managed_prometheus_workspace_region   = local.hub_cluster.region
+#   managed_prometheus_workspace_id       = module.managed_service_prometheus.workspace_id
+#   managed_prometheus_workspace_endpoint = module.managed_service_prometheus.workspace_prometheus_endpoint
+#   managed_prometheus_workspace_region   = local.hub_cluster.region
 
-  prometheus_config = {
-    global_scrape_interval = "60s"
-    global_scrape_timeout  = "15s"
-    scrape_sample_limit    = 2000
-  }
+#   prometheus_config = {
+#     global_scrape_interval = "60s"
+#     global_scrape_timeout  = "15s"
+#     scrape_sample_limit    = 2000
+#   }
 
-  custom_metrics_config = {
-    polyglot_app_config = {
-      enableBasicAuth       = false
-      path                  = "/metrics"
-      basicAuthUsername     = "username"
-      basicAuthPassword     = "password"
-      ports                 = ".*:(8080)$"
-      droppedSeriesPrefixes = "(unspecified.*)$"
-    }
-  }
-}
+#   custom_metrics_config = {
+#     polyglot_app_config = {
+#       enableBasicAuth       = false
+#       path                  = "/metrics"
+#       basicAuthUsername     = "username"
+#       basicAuthPassword     = "password"
+#       ports                 = ".*:(8080)$"
+#       droppedSeriesPrefixes = "(unspecified.*)$"
+#     }
+#   }
+# }
 
 locals{
     scrape_interval = "30s"
