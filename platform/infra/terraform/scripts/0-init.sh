@@ -7,7 +7,6 @@ source /etc/profile.d/workshop.sh
 echo "=== DEBUG: Contents of /home/ec2-user/.bashrc.d/platform.sh at script start ==="
 if [ -f "/home/ec2-user/.bashrc.d/platform.sh" ]; then
     cat /home/ec2-user/.bashrc.d/platform.sh
-    source /home/ec2-user/.bashrc.d/platform.sh
 else
     echo "ERROR: /home/ec2-user/.bashrc.d/platform.sh does not exist!"
 fi
@@ -30,6 +29,8 @@ main() {
     print_status "INFO" "Script directory: $SCRIPT_DIR"
     print_status "INFO" "ArgoCD re-check interval: $CHECK_INTERVAL seconds"
     print_status "INFO" "ArgoCD apps wait timeout: $WAIT_TIMEOUT seconds"
+
+    configure_kubectl_with_fallback "$CLUSTER_NAMES[0]" # Consider first cluster as hub cluster
 
     source "$SCRIPT_DIR/backstage-utils.sh"
 
